@@ -45,11 +45,11 @@ void producer_f (Wilkins* wilkins,
     diy::Master                     prod_master(local,
             threads,
             mem_blocks,
-            &PBlock::create,
-            &PBlock::destroy,
+            &Block::create,
+            &Block::destroy,
             &prod_storage,
-            &PBlock::save,
-            &PBlock::load);
+            &Block::save,
+            &Block::load);
     size_t global_num_points = local_num_points * global_nblocks;
     AddBlock                        prod_create(prod_master, local_num_points, global_num_points, global_nblocks);
     diy::ContiguousAssigner         prod_assigner(local.size(), global_nblocks);
@@ -70,7 +70,7 @@ void producer_f (Wilkins* wilkins,
     // create the grid dataset with default properties
     hid_t dset = H5Dcreate2(group, "grid", H5T_IEEE_F32LE, filespace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     // write the grid data
-    prod_master.foreach([&](PBlock* b, const diy::Master::ProxyWithLink& cp)
+    prod_master.foreach([&](Block* b, const diy::Master::ProxyWithLink& cp)
             { b->write_block_grid(cp, dset); });
 
     // clean up
@@ -86,7 +86,7 @@ void producer_f (Wilkins* wilkins,
     dset = H5Dcreate2(group, "particles", H5T_IEEE_F32LE, filespace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
     // write the particle data
-    prod_master.foreach([&](PBlock* b, const diy::Master::ProxyWithLink& cp)
+    prod_master.foreach([&](Block* b, const diy::Master::ProxyWithLink& cp)
             { b->write_block_points(cp, dset, global_nblocks); });
 
     // clean up

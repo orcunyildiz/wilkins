@@ -40,11 +40,11 @@ void consumer2_f (Wilkins* wilkins,
     diy::Master                     con_master(local,
             threads,
             mem_blocks,
-            &PBlock::create,
-            &PBlock::destroy,
+            &Block::create,
+            &Block::destroy,
             &con_storage,
-            &PBlock::save,
-            &PBlock::load);
+            &Block::save,
+            &Block::load);
     size_t local_num_points = global_num_points / con_nblocks;
     AddBlock                        con_create(con_master, local_num_points, global_num_points, con_nblocks);
     diy::ContiguousAssigner         con_assigner(local.size(), con_nblocks);
@@ -56,7 +56,7 @@ void consumer2_f (Wilkins* wilkins,
     hid_t dset = H5Dopen(file, "/group1/particles", H5P_DEFAULT);
 
     // read the particle data
-    con_master.foreach([&](PBlock* b, const diy::Master::ProxyWithLink& cp)
+    con_master.foreach([&](Block* b, const diy::Master::ProxyWithLink& cp)
             { b->read_block_points(cp, dset, global_num_points, con_nblocks); });
 
     // clean up

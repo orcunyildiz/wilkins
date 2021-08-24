@@ -384,6 +384,5 @@ struct AddPointBlock
 };
 
 static const unsigned DIM = 3;
-//orc@02-07: setting Block to PBlock due to conflict w Decaf blocks
-typedef     PointBlock<DIM>             PBlock;
+typedef     PointBlock<DIM>             Block;
 typedef     AddPointBlock<DIM>          AddBlock;
