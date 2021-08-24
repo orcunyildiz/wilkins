@@ -1,0 +1,38 @@
+{
+    "workflow": {
+        "filter_level": "NONE",
+        "nodes": [
+            {
+                "start_proc": 0,
+                "nprocs": 3,
+                "func": "prod"
+            },
+            {
+             	"start_proc": 3,
+                "nprocs": 1,
+                "func": "con"
+            },
+            {
+             	"start_proc": 4,
+                "nprocs": 1,
+                "func": "con2"
+            }
+        ],
+        "edges": [
+            {
+                "source": 0,
+                "target": 1,
+                "name": "prod_con",
+                "passthru": 0,
+                "metadata": 1
+            },
+            {
+                "source": 0,
+                "target": 2,
+                "name": "prod_con2",
+                "passthru": 0,
+             	"metadata": 1
+            }
+        ]
+    }
+}

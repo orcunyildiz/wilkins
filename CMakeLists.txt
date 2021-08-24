@@ -1,7 +1,7 @@
 project                     (Wilkins)
 cmake_minimum_required      (VERSION 3.9)
 
-option                      (lowfive            "Build Wilkins with Lowfive"  OFF)
+option                      (lowfive            "Build Wilkins with Lowfive"  ON)
 
 set                         (CMAKE_POSITION_INDEPENDENT_CODE ON)
 
@@ -72,4 +72,4 @@ set (CMAKE_LINKER_FLAGS ${CMAKE_LINKER_FLAGS} "-Wl,--export-dynamic -dynamic")
 
 # subdirectories
 add_subdirectory            (src)
-
+add_subdirectory            (examples)
