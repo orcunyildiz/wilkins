@@ -1,0 +1,363 @@
+#include <wilkins/wilkins.hpp>
+
+// constructor
+wilkins::
+Wilkins::Wilkins(CommHandle world_comm,
+             Workflow& workflow) :
+    world_comm_(world_comm),
+    workflow_(workflow)
+{
+    world = new Comm(world_comm);
+
+    workflow_size_ = CommSize(world_comm);
+    workflow_rank_ = CommRank(world_comm);
+
+    // collect all dataflows
+    build_dataflows(dataflows);
+
+    // inbound dataflows
+    for (size_t i = 0; i < workflow_.links.size(); i++)
+    {
+
+        // I am a node and this dataflow is an input
+        if (workflow_.my_in_link(workflow_rank_, i))
+        {
+            node_in_dataflows.push_back(pair<Dataflow*, int>(dataflows[i], i));
+        }
+    }
+
+     // outbound dataflows
+    for (size_t i = 0; i < workflow_.links.size(); i++)
+    {
+        // I am a node and this dataflow is an output
+        if (workflow_.my_out_link(workflow_rank_, i))
+        {
+
+            out_dataflows.push_back(dataflows[i]);
+        }
+    }
+
+}
+
+// destructor
+wilkins::
+Wilkins::~Wilkins()
+{
+    delete world;
+}
+
+
+// whether my rank belongs to this workflow node, identified by the name of its func field
+bool
+wilkins::
+Wilkins::my_node(const char* name)
+{
+    for (size_t i = 0; i < workflow_.nodes.size(); i++)
+    {
+        if (workflow_.my_node(workflow_rank_, i) &&
+                !strcmp(name, workflow_.nodes[i].func.c_str()))
+            return true;
+    }
+    return false;
+}
+
+// Return the total number of dataflows build by this instance of wilkins
+unsigned int
+wilkins::
+Wilkins::nb_dataflows()
+{
+    return dataflows.size();
+}
+
+// builds a vector of dataflows for all links in the workflow
+void
+wilkins::
+Wilkins::build_dataflows(vector<Dataflow*>& dataflows)
+{
+    WilkinsSizes wilkins_sizes;
+    for (size_t i = 0; i < workflow_.links.size(); i++)
+    {
+        int prod  = workflow_.links[i].prod;    // index into workflow nodes
+        int dflow = i;                          // index into workflow links
+        int con   = workflow_.links[i].con;     // index into workflow nodes
+        wilkins_sizes.prod_size           = workflow_.nodes[prod].nprocs;
+        wilkins_sizes.con_size            = workflow_.nodes[con].nprocs;
+        wilkins_sizes.prod_start          = workflow_.nodes[prod].start_proc;
+        wilkins_sizes.con_start           = workflow_.nodes[con].start_proc;
+
+        dataflows.push_back(new Dataflow(world_comm_,
+                                         workflow_size_,
+                                         workflow_rank_,
+                                         wilkins_sizes,
+                                         prod,
+                                         dflow,
+                                         con,
+                                         workflow_.links[i]));
+
+    }
+}
+
+std::vector<diy::mpi::communicator>
+wilkins::
+Wilkins::intercomms()
+{
+        return intercomms_;
+}
+
+CommHandle
+wilkins::
+Wilkins::prod_comm_handle()
+{
+    if (!out_dataflows.empty())
+        return out_dataflows[0]->prod_comm_handle();
+    else
+        return world_comm_; // The task is the only one in the graph
+}
+
+CommHandle
+wilkins::
+Wilkins::con_comm_handle()
+{
+    if (!node_in_dataflows.empty())
+        return node_in_dataflows[0].first->con_comm_handle();
+    else
+        return world_comm_; // The task is the only one in the graph
+}
+
+
+
+l5::DistMetadataVOL
+wilkins::
+Wilkins::build_lowfive()
+{
+    //orc@13-07: setting this only for the lowfive object creation, but should be defined for each prod-con pair as we did below (df->sizes()->con_start == df->sizes()->prod_start)
+    bool shared = false;
+    int passthru = 0; //orc@13-07: this should be also for each prod-con pair
+    int metadata = 1; //orc@13-07: this should be also for each prod-con pair
+    int ownership = 0;
+    std::vector<diy::mpi::communicator> communicators, out_communicators, in_communicators;
+    diy::mpi::communicator intercomm, local;
+    local = diy::mpi::communicator(this->local_comm_handle());
+
+    //I'm a producer
+    if (!out_dataflows.empty())
+    {
+
+        for (Dataflow* df : out_dataflows)
+        {
+	    passthru = df->passthru();
+            metadata = df->metadata();
+            ownership = df->ownership();
+
+            if (df->sizes()->con_start == df->sizes()->prod_start)
+                intercomm   = local;
+            else
+            {
+                MPI_Comm intercomm_;
+	        int remote_leader = df->sizes()->con_start;
+                MPI_Intercomm_create(local, 0, world_comm_, remote_leader,  0, &intercomm_);
+                intercomm = diy::mpi::communicator(intercomm_);
+            }
+
+            fmt::print("local.size() = {}, intercomm.size() = {}, passthru = {}, metadata = {}, ownership = {}\n", local.size(), intercomm.size(), passthru, metadata, ownership);
+
+            communicators.push_back(intercomm);
+            out_communicators.push_back(intercomm);
+
+        }
+
+    }
+
+    //I'm a consumer
+    if (!node_in_dataflows.empty())
+    {
+
+        for (std::pair<Dataflow*, int> pair : node_in_dataflows)
+        {
+
+            passthru = pair.first->passthru();
+            metadata = pair.first->metadata();
+            ownership = pair.first->ownership();
+
+            if (pair.first->sizes()->prod_start == pair.first->sizes()->con_start)
+                intercomm   = local;
+            else
+            {
+                MPI_Comm intercomm_;
+                int remote_leader = pair.first->sizes()->prod_start;
+     	        MPI_Intercomm_create(local, 0, world_comm_, remote_leader,  0, &intercomm_);
+                intercomm = diy::mpi::communicator(intercomm_);
+            }
+
+            fmt::print("local.size() = {}, intercomm.size() = {}, passthru = {}, metadata = {}, ownership = {}\n", local.size(), intercomm.size(), passthru, metadata, ownership);
+
+            communicators.push_back(intercomm);
+            in_communicators.push_back(intercomm);
+
+	    //orc@13-07: wait for data to be ready for the specific intercomm
+            if (passthru && !metadata)
+                intercomm.barrier();
+
+        }
+
+    }
+
+    // set up file access property list
+    this->plist_ =  H5Pcreate(H5P_FILE_ACCESS);
+    if (passthru)
+        H5Pset_fapl_mpio(plist_, local, MPI_INFO_NULL);
+
+    // set up lowfive
+    l5::DistMetadataVOL vol_plugin(local, communicators, metadata, passthru);
+    l5::H5VOLProperty vol_prop(vol_plugin);
+    vol_prop.apply(plist_);
+    //orc@20-08: TODO we would need also filename and dataset specified in the json file.
+    if (ownership)
+        vol_plugin.data_ownership("outfile.h5", "/group1/", l5::Dataset::Ownership::lowfive);
+
+    this->intercomms_ = communicators;
+    this->out_intercomms_ = out_communicators;
+    this->in_intercomms_ = in_communicators;
+
+    return vol_plugin;
+}
+
+hid_t
+wilkins::
+Wilkins::plist()
+{
+
+return this->plist_;
+
+}
+
+//orc@14-07: signals that data is ready at lowfive prod
+void
+wilkins::
+Wilkins::commit()
+{
+
+    int i = 0;
+    for (Dataflow* df : out_dataflows)
+    {
+        if (df->passthru() && !df->metadata())
+	    this->out_intercomms_[i].barrier();
+
+        i++;
+    }
+
+}
+
+int
+wilkins::
+Wilkins::prod_comm_size()
+{
+    if (!out_dataflows.empty())
+        return out_dataflows[0]->sizes()->prod_size;
+    else // The task is the only one in the graph
+    {
+        int size_comm;
+        MPI_Comm_size(world_comm_, &size_comm);
+        return size_comm;
+    }
+}
+
+int
+wilkins::
+Wilkins::con_comm_size()
+{
+    if (!node_in_dataflows.empty())
+        return node_in_dataflows[0].first->sizes()->con_size;
+    else // The task is the only one in the graph
+    {
+        int size_comm;
+        MPI_Comm_rank(world_comm_, &size_comm);
+        return size_comm;
+    }
+}
+
+int
+wilkins::
+Wilkins::local_comm_size()
+{
+    // We are the consumer in the inbound dataflow
+    if (!node_in_dataflows.empty())
+        return node_in_dataflows[0].first->sizes()->con_size;
+    // We are the producer in the outbound dataflow
+    else if(!out_dataflows.empty())
+        return out_dataflows[0]->sizes()->prod_size;
+
+    else
+    {
+        // We don't have nor inbound not outbound dataflows
+        // The task is alone in the graph, returning world comm
+        int comm_size;
+        MPI_Comm_size(world_comm_, &comm_size);
+        return comm_size;
+    }
+
+
+}
+
+CommHandle
+wilkins::
+Wilkins::local_comm_handle()
+{
+    // We are the consumer in the inbound dataflow
+    if (!node_in_dataflows.empty())
+        return node_in_dataflows[0].first->con_comm_handle();
+    // We are the producer in the outbound dataflow
+    else if (!out_dataflows.empty())
+        return out_dataflows[0]->prod_comm_handle();
+
+    else
+    {
+        // We don't have nor inbound not outbound dataflows
+        // The task is alone in the graph, returning world comm
+        return world_comm_;
+    }
+}
+
+int
+wilkins::
+Wilkins::local_comm_rank()
+{
+    int rank;
+    MPI_Comm_rank(this->local_comm_handle(), &rank);
+    return rank;
+}
+
+int
+wilkins::
+Wilkins::prod_comm_size(int i)
+{
+    if (node_in_dataflows.size() > i)
+        return node_in_dataflows[i].first->sizes()->prod_size;
+
+    return 0;
+}
+
+int
+wilkins::
+Wilkins::con_comm_size(int i)
+{
+    if (out_dataflows.size() > i)
+        return out_dataflows[i]->sizes()->con_size;
+
+    return 0;
+}
+
+int
+wilkins::
+Wilkins::workflow_comm_size()
+{
+   return workflow_size_;
+}
+
+int
+wilkins::
+Wilkins::workflow_comm_rank()
+{
+    return workflow_rank_;
+}
+
