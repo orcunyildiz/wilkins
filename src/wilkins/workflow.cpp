@@ -56,6 +56,26 @@ Workflow::my_out_link(int proc, int link)      // whether my process puts output
     return false;
 }
 
+// ref: https://www.geeksforgeeks.org/wildcard-character-matching/
+// checks if two given strings; the first string may contain wildcard characters
+bool
+match(const char *first, const char * second)
+{
+        if (*first == '\0' && *second == '\0')
+            return true;
+
+        if (*first == '*' && *(first+1) != '\0' && *second == '\0')
+        {
+            return false;
+        }
+        if (*first == '?' || *first == *second)
+            return match(first+1, second+1);
+
+        if (*first == '*')
+            return match(first+1, second) || match(first, second+1);
+
+        return false;
+}
 
 void
 Workflow::make_wflow_from_json( Workflow& workflow, const string& json_path )
@@ -94,7 +114,6 @@ Workflow::make_wflow_from_json( Workflow& workflow, const string& json_path )
             node.in_links.clear();
             node.inports.clear();
             node.outports.clear();
-            /* we defer actually linking nodes until we read the edge list */
 
             node.start_proc = v.second.get<int>("start_proc");
             node.nprocs = v.second.get<int>("nprocs");
@@ -105,59 +124,86 @@ Workflow::make_wflow_from_json( Workflow& workflow, const string& json_path )
             if (pt_inputs)
             {
                 for (auto& item : pt_inputs->get_child(""))
-                    node.inports.push_back(item.second.get_value<string>());
+                {
+
+                    string filename = item.second.get<string>("filename");
+                    // Retrieving the input datasets, if present
+                    boost::optional<bpt::ptree&> pt_dsets = item.second.get_child_optional("dsets");
+                    if (pt_dsets)
+                    {
+                     	for (auto& item : pt_dsets->get_child("")) {
+                            string full_path = filename + "/" + item.second.get_value<string>();
+                            node.inports.push_back(full_path);
+                            //for each filename+dset pair, we create a link
+                            WorkflowLink link;
+                            link.prod = -1; //-1 indicates prod is undefined during the creation
+                    	    link.con = workflow.nodes.size();
+                            link.name = full_path + ":" + node.func;
+                            //TODO move these to nodes rather than edges:
+                            link.passthru = 0;
+                            link.metadata = 1;
+                            link.ownership = 0;
+                            //TODO think on how we handle the cycles
+                            link.tokens = 0;
+
+                            workflow.links.push_back( link );
+
+                        }
+                    }
+
+                }
             }
 
-            // Retrieving the output ports, if present
-            boost::optional<bpt::ptree&> pt_outputs = v.second.get_child_optional("outports");
-            if (pt_outputs)
+            boost::optional<bpt::ptree&> pt_outports = v.second.get_child_optional("outports");
+            if (pt_outports)
             {
-                for (auto& item : pt_outputs->get_child(""))
-                    node.outports.push_back(item.second.get_value<string>());
+             	for (auto& item : pt_outports->get_child(""))
+                {
+                    int ownership = 0;
+                    boost::optional<int> opt_ownership = item.second.get_optional<int>("ownership");
+                    if(opt_ownership)
+                        ownership = opt_ownership.get();
+
+                    string filename = item.second.get<string>("filename");
+                    // Retrieving the output datasets, if present
+                    boost::optional<bpt::ptree&> pt_dsets = item.second.get_child_optional("dsets");
+                    if (pt_dsets)
+                    {
+             	        for (auto& item : pt_dsets->get_child("")) {
+                            string full_path = filename + "/" + item.second.get_value<string>();
+                            node.outports.push_back(full_path); //TODO: add the ownership info later
+                        }
+                    }
+
+                }
             }
 
             workflow.nodes.push_back( node );
         } // End for workflow.nodes
 
-        /*
-        * similarly for the edges
-        */
-        for ( auto &&v : root.get_child( "workflow.edges" ) )
+        // linking the nodes
+        for ( size_t i = 0; i< workflow.links.size(); i++)
         {
-            WorkflowLink link;
+            string inPort;
+            stringstream line(workflow.links[i].name);
+            std::getline(line, inPort, ':');
 
-            /* link the nodes correctly(?) */
-            link.prod = v.second.get<int>("source");
-            link.con = v.second.get<int>("target");
+            for (size_t j = 0; j < workflow.nodes.size(); j++)
+            {
+	        //simply find the prod then connect it
+                for (string outPort : workflow.nodes[j].outports)
+                {
+                    if(match(inPort.c_str(),outPort.c_str()))
+                    {
+                        workflow.links[i].prod = j;
+                        workflow.nodes.at( j ).out_links.push_back(i);
+                        workflow.nodes.at( workflow.links[i].con ).in_links.push_back(i);
+                    }
+                }
+            }
 
-            workflow.nodes.at( link.prod ).out_links.push_back( workflow.links.size() );
-            workflow.nodes.at( link.con ).in_links.push_back( workflow.links.size() );
+        }
 
-            link.name = v.second.get<string>("name");
-            //orc@13-07: adding lowfive passthru&metadata&ownership flags
-            boost::optional<int> opt_passthru = v.second.get_optional<int>("passthru");
-            if(opt_passthru)
-                link.passthru = opt_passthru.get();
-            else
-                link.passthru = 0;
-            boost::optional<int> opt_metadata = v.second.get_optional<int>("metadata");
-            if(opt_metadata)
-                link.metadata = opt_metadata.get();
-            else
-                link.metadata = 1;
-            boost::optional<int> opt_ownership = v.second.get_optional<int>("ownership");
-            if(opt_ownership)
-                link.ownership = opt_ownership.get();
-            else
-                link.ownership = 0;
-            boost::optional<int> opt_tokens = v.second.get_optional<int>("tokens");
-            if(opt_tokens)
-                link.tokens = opt_tokens.get();
-            else
-                link.tokens = 0;
-
-            workflow.links.push_back( link );
-        } // End for workflow.links
     }
     catch( const bpt::json_parser_error& jpe )
     {

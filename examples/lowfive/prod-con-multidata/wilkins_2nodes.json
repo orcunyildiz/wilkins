@@ -5,22 +5,29 @@
             {
                 "start_proc": 0,
                 "nprocs": 3,
-                "func": "prod"
+                "func": "prod",
+                "outports": [
+                    {
+                        "filename": "outfile.h5",
+                        "ownership": 1,
+                        "dsets": [
+                            "grid"
+                        ]
+                    }
+                ]
             },
             {
              	"start_proc": 3,
                 "nprocs": 1,
-                "func": "con"
-            }
-        ],
-        "edges": [
-            {
-                "source": 0,
-                "target": 1,
-                "name": "prod_con",
-                "passthru": 0,
-                "metadata": 1,
-                "ownership": 0
+                "func": "con",
+                "inports": [
+                    {
+                     	"filename": "outfile.h5",
+                        "dsets": [
+                            "grid"
+                        ]
+                    }
+                ]
             }
         ]
     }
