@@ -145,8 +145,8 @@ Wilkins::build_lowfive()
 
         for (Dataflow* df : out_dataflows)
         {
-	    passthru = df->passthru();
-            metadata = df->metadata();
+	    passthru = df->out_passthru();
+            metadata = df->out_metadata();
             ownership = df->ownership();
 
             if (df->sizes()->con_start == df->sizes()->prod_start)
@@ -175,8 +175,13 @@ Wilkins::build_lowfive()
         for (std::pair<Dataflow*, int> pair : node_in_dataflows)
         {
 
-            passthru = pair.first->passthru();
-            metadata = pair.first->metadata();
+            passthru = pair.first->in_passthru();
+            metadata = pair.first->in_metadata();
+            //TODO: resolve conflicting passthru/metadata flags for prod-con pairs
+            //int out_passthru = pair.first->out_passthru();
+            //int out_metadata = pair.first->out_metadata();
+	    //if(out_passthru && !out_metadata)
+	    //	passthru = out_passthru;
             ownership = pair.first->ownership();
 
             if (pair.first->sizes()->prod_start == pair.first->sizes()->con_start)
@@ -240,7 +245,7 @@ Wilkins::commit()
     int i = 0;
     for (Dataflow* df : out_dataflows)
     {
-        if (df->passthru() && !df->metadata())
+        if (df->out_passthru() && !df->out_metadata())
 	    this->out_intercomms_[i].barrier();
 
         i++;

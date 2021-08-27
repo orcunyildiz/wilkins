@@ -119,6 +119,24 @@ Workflow::make_wflow_from_json( Workflow& workflow, const string& json_path )
             node.nprocs = v.second.get<int>("nprocs");
             node.func = v.second.get<string>("func");
 
+            //moving passthru&metadata flags to the nodes
+            boost::optional<int> opt_passthru = v.second.get_optional<int>("passthru");
+            if(opt_passthru)
+                node.passthru = opt_passthru.get();
+            else
+                node.passthru = 0;
+            boost::optional<int> opt_metadata = v.second.get_optional<int>("metadata");
+            if(opt_metadata)
+                node.metadata = opt_metadata.get();
+            else
+                node.metadata = 1;
+
+            if (!(node.metadata + node.passthru))
+            {
+                fprintf(stderr, "Error: Either metadata or passthru must be enabled. Both cannot be disabled.\n");
+                exit(1);
+            }
+
             // Retrieving the input ports, if present
             boost::optional<bpt::ptree&> pt_inputs = v.second.get_child_optional("inports");
             if (pt_inputs)
@@ -140,8 +158,9 @@ Workflow::make_wflow_from_json( Workflow& workflow, const string& json_path )
                     	    link.con = workflow.nodes.size();
                             link.name = full_path + ":" + node.func;
                             //TODO move these to nodes rather than edges:
-                            link.passthru = 0;
-                            link.metadata = 1;
+                            link.in_passthru = node.passthru;
+                            link.in_metadata = node.metadata;
+
                             link.ownership = 0;
                             //TODO think on how we handle the cycles
                             link.tokens = 0;
@@ -196,6 +215,9 @@ Workflow::make_wflow_from_json( Workflow& workflow, const string& json_path )
                     if(match(inPort.c_str(),outPort.c_str()))
                     {
                         workflow.links[i].prod = j;
+                     	workflow.links[i].out_passthru = workflow.nodes[j].passthru;
+                        workflow.links[i].out_metadata = workflow.nodes[j].metadata;
+
                         workflow.nodes.at( j ).out_links.push_back(i);
                         workflow.nodes.at( workflow.links[i].con ).in_links.push_back(i);
                     }

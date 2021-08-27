@@ -53,8 +53,11 @@ public:
     CommHandle con_comm_handle();
 
     //orc@12-07: lowfive stuff
-    int passthru();
-    int metadata();
+    int in_passthru();
+    int in_metadata();
+    int out_passthru();
+    int out_metadata();
+
     int ownership();
 
 private:
@@ -72,8 +75,10 @@ private:
     int wflow_dflow_id_;             // index of corresponding link in the workflow
 
     int tokens_;                     // Number of empty message to receive on destPort_
-    int passthru_;                   // lowfive: write to file
-    int metadata_;                   // lowfive: build and use in-memory metadata
+    int in_passthru_;                   // lowfive-con: write to file
+    int in_metadata_;                   // lowfive-con: build and use in-memory metadata
+    int out_passthru_;                   // lowfive-prod: write to file
+    int out_metadata_;                   // lowfive-prod: build and use in-memory metadata
     int ownership_;                  // lowfive: set ownership of dataset (default (0) is user (shallow copy), 1 means deep copy)
 
 };// End of class Dataflow

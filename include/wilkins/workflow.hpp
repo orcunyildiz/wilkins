@@ -48,6 +48,8 @@ struct WorkflowNode                          /// a producer or consumer
     void* args;                 ///< callback arguments
     vector<string> inports;     ///< input ports, if available
     vector<string> outports;    ///< output ports, if available
+    int passthru;                   ///< "lowfive: write file to disk"
+    int metadata;                   ///< "lowfive: build and use in-memory metadata"
     void add_out_link(int link);
     void add_in_link(int link);
 };
@@ -61,8 +63,10 @@ struct WorkflowLink                          /// a dataflow
     string name;                    ///< name of the link. Should be unique in the workflow
 
     int tokens;                     ///< number of empty messages to receive on destPort before a real get (for supporting cycles)
-    int passthru;		    ///< "lowfive: write file to disk"
-    int metadata;                   ///< "lowfive: build and use in-memory metadata"
+    int in_passthru;		    ///< "lowfive-con: write file to disk"
+    int in_metadata;                ///< "lowfive-con: build and use in-memory metadata"
+    int out_passthru;               ///< "lowfive-prod: write file to disk"
+    int out_metadata;               ///< "lowfive-prod: build and use in-memory metadata"
     int ownership;                  // lowfive: set ownership of dataset (default (0) is user (shallow copy), 1 means deep copy)
 
 };

@@ -1,11 +1,12 @@
 {
     "workflow": {
-        "filter_level": "NONE",
         "nodes": [
             {
                 "start_proc": 0,
                 "nprocs": 3,
                 "func": "prod",
+                "passthru": 1,
+                "metadata": 0,
                 "outports": [
                     {
                      	"filename": "outfile.h5",
@@ -21,6 +22,8 @@
              	"start_proc": 3,
                 "nprocs": 1,
                 "func": "con",
+                "passthru": 1,
+                "metadata": 0,
                 "inports": [
                     {
                      	"filename": "outfile.h5",
@@ -34,6 +37,8 @@
              	"start_proc": 4,
                 "nprocs": 1,
                 "func": "con2",
+                "passthru": 1,
+                "metadata": 0,
                 "inports": [
                     {
                      	"filename": "outfile.h5",

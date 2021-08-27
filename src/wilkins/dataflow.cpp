@@ -2,16 +2,30 @@
 
 int
 wilkins::
-Dataflow::passthru()
+Dataflow::in_passthru()
 {
-    return passthru_;
+    return in_passthru_;
 }
 
 int
 wilkins::
-Dataflow::metadata()
+Dataflow::in_metadata()
 {
-    return metadata_;
+    return in_metadata_;
+}
+
+int
+wilkins::
+Dataflow::out_passthru()
+{
+    return out_passthru_;
+}
+
+int
+wilkins::
+Dataflow::out_metadata()
+{
+    return out_metadata_;
 }
 
 int
@@ -90,8 +104,10 @@ Dataflow::Dataflow(CommHandle world_comm,
     wflow_con_id_(con),
     type_(WILKINS_OTHER_COMM),
     tokens_(0),
-    passthru_(0),
-    metadata_(0),
+    in_passthru_(0),
+    in_metadata_(1),
+    out_passthru_(0),
+    out_metadata_(1),
     ownership_(0)
 {
 
@@ -105,8 +121,10 @@ Dataflow::Dataflow(CommHandle world_comm,
     }
 
     //orc@13-07: lowfive related flags
-    passthru_ = wflowLink.passthru;
-    metadata_ = wflowLink.metadata;
+    in_passthru_ = wflowLink.in_passthru;
+    in_metadata_ = wflowLink.in_metadata;
+    out_passthru_ = wflowLink.out_passthru;
+    out_metadata_ = wflowLink.out_metadata;
     ownership_ = wflowLink.ownership;
 
     // communicators
