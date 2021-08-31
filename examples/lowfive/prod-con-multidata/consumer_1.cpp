@@ -71,12 +71,8 @@ int main(int argc, char* argv[])
     diy::mpi::environment     env(argc, argv, MPI_THREAD_MULTIPLE);
     diy::mpi::communicator    world;
 
-    //orc@02-07: wilkins init
-    Workflow workflow;
-    Workflow::make_wflow_from_json(workflow, "wilkins_3nodes.json");
-
     // create wilkins
-    Wilkins* wilkins = new Wilkins(MPI_COMM_WORLD, workflow);
+    Wilkins* wilkins = new Wilkins(MPI_COMM_WORLD, "wilkins_3nodes.json");
 
     fmt::print("Halo from Wilkins\n");
 

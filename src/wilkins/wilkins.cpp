@@ -3,14 +3,16 @@
 // constructor
 wilkins::
 Wilkins::Wilkins(CommHandle world_comm,
-             Workflow& workflow) :
-    world_comm_(world_comm),
-    workflow_(workflow)
+	     const string& json_path) :
+    world_comm_(world_comm)
 {
     world = new Comm(world_comm);
 
     workflow_size_ = CommSize(world_comm);
     workflow_rank_ = CommRank(world_comm);
+
+    //build workflow
+    Workflow::make_wflow_from_json(workflow_, json_path);
 
     // collect all dataflows
     build_dataflows(dataflows);

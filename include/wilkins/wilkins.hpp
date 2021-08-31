@@ -32,7 +32,7 @@ class Wilkins
 {
 public:
     Wilkins(CommHandle world_comm,
-          Workflow& workflow);
+          const string& json_path);
     ~Wilkins();
 
     //! whether my rank belongs to this workflow node, identified by the name of its func field
