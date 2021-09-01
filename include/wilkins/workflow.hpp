@@ -24,6 +24,8 @@
 #include "boost/property_tree/ptree.hpp"
 #include "boost/property_tree/json_parser.hpp"
 
+#include <yaml-cpp/yaml.h>
+
 #include <string>
 
 namespace bpt = boost::property_tree;
@@ -88,6 +90,9 @@ struct Workflow                              /// an entire workflow
 
     static void
     make_wflow_from_json( Workflow& workflow, const string& json_path );
+
+    static void
+    make_wflow_from_yaml( Workflow& workflow, const string& yaml_path );
 };
 
 #endif

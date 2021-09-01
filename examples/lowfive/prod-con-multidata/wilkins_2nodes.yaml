@@ -1,0 +1,20 @@
+nodes:
+  - func: prod
+    start_proc: 0
+    nprocs: 3
+    passthru: 0
+    metadata: 1
+    outports:
+      - filename: outfile.h5
+        dsets:
+          - name: grid
+            ownership: 1
+  - func: con
+    start_proc: 3
+    nprocs: 1
+    passthru: 0
+    metadata: 1
+    inports:
+      - filename: outfile.h5
+        dsets:
+          - name: grid

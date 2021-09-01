@@ -3,7 +3,7 @@
 // constructor
 wilkins::
 Wilkins::Wilkins(CommHandle world_comm,
-	     const string& json_path) :
+	     const string& config_file) :
     world_comm_(world_comm)
 {
     world = new Comm(world_comm);
@@ -12,7 +12,16 @@ Wilkins::Wilkins(CommHandle world_comm,
     workflow_rank_ = CommRank(world_comm);
 
     //build workflow
-    Workflow::make_wflow_from_json(workflow_, json_path);
+    std::regex jsn ("(.*json)");
+    std::regex yml ("(.*yaml)");
+    if (std::regex_match (config_file,jsn))
+        Workflow::make_wflow_from_json(workflow_, config_file);
+    else if (std::regex_match (config_file,yml))
+        Workflow::make_wflow_from_yaml(workflow_, config_file);
+    else{
+        fprintf(stderr, "ERROR: Not supported configuration file format. Please provide the graph definition in either JSON or YAML.\n");
+        exit(1);
+    }
 
     // collect all dataflows
     build_dataflows(dataflows);

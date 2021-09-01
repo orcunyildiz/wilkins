@@ -8,6 +8,7 @@
 #include <dlfcn.h>
 #include <map>
 #include <string>
+#include <regex>
 #include <vector>
 
 #include <wilkins/dataflow.hpp>
@@ -32,7 +33,7 @@ class Wilkins
 {
 public:
     Wilkins(CommHandle world_comm,
-          const string& json_path);
+          const string& config_file);
     ~Wilkins();
 
     //! whether my rank belongs to this workflow node, identified by the name of its func field

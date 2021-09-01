@@ -83,7 +83,8 @@ int main(int argc, char* argv[])
     diy::mpi::communicator    world;
 
     // create wilkins
-    Wilkins* wilkins = new Wilkins(MPI_COMM_WORLD, "wilkins_2nodes.json");
+    Wilkins* wilkins = new Wilkins(MPI_COMM_WORLD, "wilkins_2nodes.yaml");
+    //Wilkins* wilkins = new Wilkins(MPI_COMM_WORLD, "wilkins_2nodes.json");
 
     fmt::print("Halo from Wilkins\n");
 

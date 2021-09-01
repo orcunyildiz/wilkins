@@ -1,0 +1,31 @@
+nodes:
+  - func: prod
+    start_proc: 0
+    nprocs: 3
+    passthru: 1
+    metadata: 0
+    outports:
+      - filename: outfile.h5
+        dsets:
+          - name: grid
+          - name: particles
+  - func: con
+    start_proc: 3
+    nprocs: 1
+    passthru: 1
+    metadata: 0
+    inports:
+      - filename: outfile.h5
+        dsets:
+          - name: grid
+  - func: con2
+    start_proc: 4
+    nprocs: 1
+    passthru: 1
+    metadata: 0
+    inports:
+      - filename: outfile.h5
+        dsets:
+          - name: particles
+
+
