@@ -49,6 +49,9 @@ if                          (lowfive)
   include_directories         (${HDF5_INCLUDE_DIR})
 endif                       (lowfive)
 
+#YAML-cpp
+add_subdirectory            (ext/yaml-cpp)
+set                         (libraries ${libraries} yaml-cpp::yaml-cpp)
 
 # Boost
 find_package                (Boost 1.59.0 COMPONENTS serialization REQUIRED)
