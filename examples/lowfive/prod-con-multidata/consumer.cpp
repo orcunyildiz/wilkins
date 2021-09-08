@@ -21,8 +21,7 @@ using namespace wilkins;
 void consumer_f (Wilkins* wilkins,
                  std::string prefix,
                  int threads, int mem_blocks,
-                 Bounds domain,
-                 int con_nblocks, int dim, size_t global_num_points)
+                 int con_nblocks)
 {
     fmt::print("Entered consumer\n");
 
@@ -31,8 +30,43 @@ void consumer_f (Wilkins* wilkins,
 
     communicator local = wilkins->local_comm_handle();
 
+    //orc@08-09: adapting to the current lowfive API TODO: we can call this inside build_lowfive() 
+    vol_plugin.data_intercomm("outfile.h5", "/group1/grid", 0);
+    vol_plugin.data_intercomm("outfile.h5", "/group1/particles", 0);
+
     // --- consumer ranks running user task code ---
 
+
+    // open the file and the dataset
+    hid_t file        = H5Fopen("outfile.h5", H5F_ACC_RDONLY, plist);
+    hid_t dset_grid   = H5Dopen(file, "/group1/grid", H5P_DEFAULT);
+    hid_t dspace_grid = H5Dget_space(dset_grid);
+
+    hid_t dset_particles   = H5Dopen(file, "/group1/particles", H5P_DEFAULT);
+    hid_t dspace_particles = H5Dget_space(dset_particles);
+
+    // get global domain bounds
+    int dim = H5Sget_simple_extent_ndims(dspace_grid);
+    Bounds domain { dim };
+    {
+        std::vector<hsize_t> min_(dim), max_(dim);
+        H5Sget_select_bounds(dspace_grid, min_.data(), max_.data());
+        for (int i = 0; i < dim; ++i)
+        {
+            domain.min[i] = min_[i];
+            domain.max[i] = max_[i];
+        }
+    }
+    fmt::print(stderr, "Read domain: {} {}\n", domain.min, domain.max);
+
+    // get global number of particles
+    size_t global_num_points;
+    {
+        std::vector<hsize_t> min_(1), max_(1);
+        H5Sget_select_bounds(dspace_particles, min_.data(), max_.data());
+        global_num_points = max_[0] + 1;
+    }
+    fmt::print(stderr, "Global num points: {}\n", global_num_points);
 
     // diy setup for the consumer task on the consumer side
     diy::FileStorage                con_storage(prefix);
@@ -50,26 +84,19 @@ void consumer_f (Wilkins* wilkins,
     diy::RegularDecomposer<Bounds>  con_decomposer(dim, domain, con_nblocks);
     con_decomposer.decompose(local.rank(), con_assigner, con_create);
 
-    // open the file and the dataset
-    hid_t file = H5Fopen("outfile.h5", H5F_ACC_RDONLY, plist);
-    hid_t dset = H5Dopen(file, "/group1/grid", H5P_DEFAULT);
-
     // read the grid data
     con_master.foreach([&](Block* b, const diy::Master::ProxyWithLink& cp)
-            { b->read_block_grid(cp, dset); });
-
-    // clean up
-    H5Dclose(dset);
-
-    // open the particle dataset
-    dset = H5Dopen(file, "/group1/particles", H5P_DEFAULT);
+            { b->read_block_grid(cp, dset_grid); });
 
     // read the particle data
     con_master.foreach([&](Block* b, const diy::Master::ProxyWithLink& cp)
-            { b->read_block_points(cp, dset, global_num_points, con_nblocks); });
+            { b->read_block_points(cp, dset_particles, global_num_points, con_nblocks); });
 
     // clean up
-    H5Dclose(dset);
+    H5Sclose(dspace_grid);
+    H5Sclose(dspace_particles);
+    H5Dclose(dset_grid);
+    H5Dclose(dset_particles);
     H5Fclose(file);
     H5Pclose(plist);
 }
@@ -92,35 +119,15 @@ int main(int argc, char* argv[])
     int                       mem_blocks        = -1;             // all blocks in memory
     int                       threads           = 1;              // no multithreading
     std::string               prefix            = "./DIY.XXXXXX"; // for saving block files out of core
-    // opts does not handle bool correctly, using int instead
-    int                       metadata          = 1;              // build in-memory metadata
-    int                       passthru          = 0;              // write file to disk
-    size_t                    local_npoints     = 100;            // points per block
-
-    // default global data bounds
-    Bounds domain { dim };
-    for (auto i = 0; i < dim; i++)
-    {
-        domain.min[i] = 0;
-        domain.max[i] = 10;
-    }
 
     // get command line arguments
     using namespace opts;
     Options ops;
     ops
-        >> Option('n', "number",    local_npoints,  "number of points per block")
         >> Option('b', "blocks",    global_nblocks, "number of blocks")
         >> Option('t', "thread",    threads,        "number of threads")
         >> Option(     "memblks",   mem_blocks,     "number of blocks to keep in memory")
         >> Option(     "prefix",    prefix,         "prefix for external storage")
-        >> Option('m', "memory",    metadata,       "build and use in-memory metadata")
-        >> Option('f', "file",      passthru,       "write file to disk")
-        ;
-    ops
-        >> Option('x',  "max-x",    domain.max[0],  "domain max x")
-        >> Option('y',  "max-y",    domain.max[1],  "domain max y")
-        >> Option('z',  "max-z",    domain.max[2],  "domain max z")
         ;
 
     bool verbose, help;
@@ -140,19 +147,9 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    if (!(metadata + passthru))
-    {
-        fmt::print(stderr, "Error: Either metadata or passthru must be enabled. Both cannot be disabled.\n");
-        abort();
-    }
-
-    // ---  all ranks running workflow runtime system code ---
-
-    size_t global_npoints = global_nblocks * local_npoints;         // all block have same number of points
-
     // consumer will read different block decomposition than the producer
     // producer also needs to know this number so it can match collective operations
     int con_nblocks = pow(2, dim) * global_nblocks;
 
-    consumer_f(wilkins, prefix, threads, mem_blocks, domain, con_nblocks, dim, global_npoints);
+    consumer_f(wilkins, prefix, threads, mem_blocks, con_nblocks);
 }

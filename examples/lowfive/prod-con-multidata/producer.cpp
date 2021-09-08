@@ -119,9 +119,6 @@ int main(int argc, char* argv[])
     int                       mem_blocks        = -1;             // all blocks in memory
     int                       threads           = 1;              // no multithreading
     std::string               prefix            = "./DIY.XXXXXX"; // for saving block files out of core
-    // opts does not handle bool correctly, using int instead
-    int                       metadata          = 1;              // build in-memory metadata
-    int                       passthru          = 0;              // write file to disk
     size_t                    local_npoints     = 100;            // points per block
 
     // default global data bounds
@@ -141,8 +138,6 @@ int main(int argc, char* argv[])
         >> Option('t', "thread",    threads,        "number of threads")
         >> Option(     "memblks",   mem_blocks,     "number of blocks to keep in memory")
         >> Option(     "prefix",    prefix,         "prefix for external storage")
-        >> Option('m', "memory",    metadata,       "build and use in-memory metadata")
-        >> Option('f', "file",      passthru,       "write file to disk")
         ;
     ops
         >> Option('x',  "max-x",    domain.max[0],  "domain max x")
@@ -166,14 +161,6 @@ int main(int argc, char* argv[])
         }
         return 1;
     }
-
-    if (!(metadata + passthru))
-    {
-        fmt::print(stderr, "Error: Either metadata or passthru must be enabled. Both cannot be disabled.\n");
-        abort();
-    }
-
-    // ---  all ranks running workflow runtime system code ---
 
     size_t global_npoints = global_nblocks * local_npoints;         // all block have same number of points
 
