@@ -26,7 +26,7 @@ void producer_f (Wilkins* wilkins,
 
 {
 
-    fmt::print("Entered producer\n");
+    fmt::print("Entered producer1\n");
 
     l5::DistMetadataVOL vol_plugin = wilkins->build_lowfive();
     hid_t plist = wilkins->plist();
@@ -36,7 +36,7 @@ void producer_f (Wilkins* wilkins,
 
     // set ownership of dataset (default is user (shallow copy), lowfive means deep copy)
     // filename and full path to dataset can contain '*' and '?' wild cards (ie, globs, not regexes)
-    //vol_plugin.data_ownership("outfile.h5", "/group1/", l5::Dataset::Ownership::lowfive);
+    //vol_plugin.data_ownership("outfile1.h5", "/group1/", l5::Dataset::Ownership::lowfive);
 
     // --- producer ranks running user task code  ---
 
@@ -57,7 +57,7 @@ void producer_f (Wilkins* wilkins,
     prod_decomposer.decompose(local.rank(), prod_assigner, prod_create);
 
     // create a new file and group using default properties
-    hid_t file = H5Fcreate("outfile.h5", H5F_ACC_TRUNC, H5P_DEFAULT, plist);
+    hid_t file = H5Fcreate("outfile1.h5", H5F_ACC_TRUNC, H5P_DEFAULT, plist);
     hid_t group = H5Gcreate(file, "/group1", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
     std::vector<hsize_t> domain_cnts(DIM);
@@ -72,22 +72,6 @@ void producer_f (Wilkins* wilkins,
     // write the grid data
     prod_master.foreach([&](Block* b, const diy::Master::ProxyWithLink& cp)
             { b->write_block_grid(cp, dset); });
-
-    // clean up
-    H5Dclose(dset);
-    H5Sclose(filespace);
-
-    // create the file data space for the particles
-    domain_cnts[0]  = global_num_points;
-    domain_cnts[1]  = DIM;
-    filespace = H5Screate_simple(2, &domain_cnts[0], NULL);
-
-    // create the particle dataset with default properties
-    dset = H5Dcreate2(group, "particles", H5T_IEEE_F32LE, filespace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-
-    // write the particle data
-    prod_master.foreach([&](Block* b, const diy::Master::ProxyWithLink& cp)
-            { b->write_block_points(cp, dset, global_nblocks); });
 
     // clean up
     H5Dclose(dset);
@@ -110,7 +94,7 @@ int main(int argc, char* argv[])
     diy::mpi::communicator    world;
 
     // create wilkins
-    Wilkins* wilkins = new Wilkins(MPI_COMM_WORLD, "wilkins_prod_con.yaml");
+    Wilkins* wilkins = new Wilkins(MPI_COMM_WORLD, "wilkins_2prods_con.yaml");
 
     fmt::print("Halo from Wilkins\n");
 

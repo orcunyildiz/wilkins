@@ -1,0 +1,4 @@
+#Executable names for the three different use cases:
+prod-con  : producer - consumer
+prod-2cons: producer_1 - consumer_1_2 - consumer_2_2
+2prods-con: producer_1_2 - producer_2_2 - consumer_1
