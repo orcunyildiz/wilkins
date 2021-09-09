@@ -15,8 +15,6 @@
 #include <map>
 #include <string>
 
-#include <boost/type_index.hpp>
-
 #include <wilkins/comm.hpp>
 #include <wilkins/types.hpp>
 

@@ -21,14 +21,9 @@
 #include <fstream>
 #include <sstream>
 
-#include "boost/property_tree/ptree.hpp"
-#include "boost/property_tree/json_parser.hpp"
-
 #include <yaml-cpp/yaml.h>
 
 #include <string>
-
-namespace bpt = boost::property_tree;
 
 using namespace std;
 
@@ -87,9 +82,6 @@ struct Workflow                              /// an entire workflow
     bool my_in_link(int proc, int link);    ///< whether my process gets input data from this link
 
     bool my_out_link(int proc, int link);   ///< whether my process puts output data to this link
-
-    static void
-    make_wflow_from_json( Workflow& workflow, const string& json_path );
 
     static void
     make_wflow_from_yaml( Workflow& workflow, const string& yaml_path );

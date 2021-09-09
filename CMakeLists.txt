@@ -42,10 +42,6 @@ endif                       (lowfive)
 add_subdirectory            (ext/yaml-cpp)
 set                         (libraries ${libraries} yaml-cpp::yaml-cpp)
 
-# Boost
-find_package                (Boost 1.59.0 COMPONENTS serialization REQUIRED)
-message                     (STATUS "Boost libraries: " ${Boost_LIBRARIES})
-
 # Set include directories
 set                         (CMAKE_INCLUDE_SYSTEM_FLAG_CXX "-isystem")
 include_directories         (${Boost_INCLUDE_DIRS}

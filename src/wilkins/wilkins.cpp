@@ -12,14 +12,15 @@ Wilkins::Wilkins(CommHandle world_comm,
     workflow_rank_ = CommRank(world_comm);
 
     //build workflow
-    std::regex jsn ("(.*json)");
+    //omitting json support now, can add later if needed.
+    //std::regex jsn ("(.*json)");
     std::regex yml ("(.*yaml)");
-    if (std::regex_match (config_file,jsn))
-        Workflow::make_wflow_from_json(workflow_, config_file);
-    else if (std::regex_match (config_file,yml))
+    if (std::regex_match (config_file,yml))
         Workflow::make_wflow_from_yaml(workflow_, config_file);
+    //else if (std::regex_match (config_file,jsn))
+    //    Workflow::make_wflow_from_json(workflow_, config_file);
     else{
-        fprintf(stderr, "ERROR: Not supported configuration file format. Please provide the graph definition in either JSON or YAML.\n");
+        fprintf(stderr, "ERROR: Not supported configuration file format. Please provide the graph definition in YAML.\n");
         exit(1);
     }
 
