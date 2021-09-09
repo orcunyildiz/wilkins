@@ -1,0 +1,16 @@
+imports:
+    HighFive: ./ext/HighFive
+    fmt: ./ext/fmt
+    diy: ./ext/diy
+
+git module HighFive:
+    url: gh:BlueBrain/HighFive
+    rev: e582076fb5b4dd654738c24c2d40517d11512ca6
+
+git module fmt:
+    url: gh:fmtlib/fmt
+    rev: 58aa04573f6fab54dd998183d333bf9d630843ee
+
+git module diy:
+    url: kgl:mrzv/diy
+    rev: e3bfa9846332a4621385226cd8417b9967d97022

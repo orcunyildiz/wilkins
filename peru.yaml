@@ -1,0 +1,11 @@
+imports:
+    yaml-cpp: ./ext/yaml-cpp
+    lowfive: ./ext/lowfive
+
+git module yaml-cpp:
+    url: git://github.com/jbeder/yaml-cpp.git
+    rev: 6308112e54fe41a3bc1ceeb2b807f0d09f15a1e9
+
+git module lowfive:
+    url: ssh://git@bitbucket.org/tpeterka1/lowfive.git
+    rev: d2230bcb1e856714c59a00f316e1dda8de083868

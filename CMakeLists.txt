@@ -18,19 +18,8 @@ set                       (libraries    ${libraries} ${MPI_C_LIBRARIES} ${MPI_CX
 
 #lowfive
 if                          (lowfive)
-  include_directories         (${LOWFIVE_INCLUDE_DIR})
-  set                         (libraries ${libraries} ${LOWFIVE_LIBRARY})
-  # DIY
-  option                      (build_examples "" OFF)
-  option                      (build_tests "" OFF)
-  option                      (python "" OFF)
-  add_subdirectory            (ext/diy)
-  set                         (libraries ${libraries} diy)
-
-  # fmt
-  option                      (FMT_INSTALL "" ON)
-  add_subdirectory            (ext/fmt)
-  set                         (libraries ${libraries} fmt::fmt)
+  add_subdirectory            (ext/lowfive)
+  set                         (libraries ${libraries} lowfive)
 
   # HDF5
   if                          (HDF5_LIBRARY AND Z_LIBRARY)
