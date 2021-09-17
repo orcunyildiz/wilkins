@@ -30,12 +30,7 @@ void consumer_f (Wilkins* wilkins,
 
     communicator local = wilkins->local_comm_handle();
 
-    //orc@08-09: adapting to the current lowfive API TODO: we can call this inside build_lowfive() 
-    vol_plugin.data_intercomm("outfile.h5", "/group1/grid", 0);
-    vol_plugin.data_intercomm("outfile.h5", "/group1/particles", 0);
-
     // --- consumer ranks running user task code ---
-
 
     // open the file and the dataset
     hid_t file        = H5Fopen("outfile.h5", H5F_ACC_RDONLY, plist);

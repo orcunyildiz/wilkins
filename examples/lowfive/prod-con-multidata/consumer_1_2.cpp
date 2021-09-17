@@ -30,7 +30,6 @@ void consumer1_f (Wilkins* wilkins,
 
     communicator local = wilkins->local_comm_handle();
 
-    vol_plugin.data_intercomm("outfile.h5", "/group1/grid", 0);
     // --- consumer ranks running user task code ---
 
     // open the file, the dataset, and the dataspace

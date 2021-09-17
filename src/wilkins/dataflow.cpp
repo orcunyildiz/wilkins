@@ -1,5 +1,12 @@
 #include <wilkins/dataflow.hpp>
 
+string
+wilkins::
+Dataflow::name()
+{
+    return name_;
+}
+
 int
 wilkins::
 Dataflow::in_passthru()
@@ -126,6 +133,8 @@ Dataflow::Dataflow(CommHandle world_comm,
     out_passthru_ = wflowLink.out_passthru;
     out_metadata_ = wflowLink.out_metadata;
     ownership_ = wflowLink.ownership;
+
+    name_ = wflowLink.name;
 
     // communicators
 

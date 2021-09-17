@@ -9,6 +9,8 @@ nodes:
         dsets:
           - name: grid
             ownership: 1
+          - name: particles
+            ownership: 1
   - func: con
     start_proc: 3
     nprocs: 1
@@ -18,3 +20,4 @@ nodes:
       - filename: outfile.h5
         dsets:
           - name: grid
+          - name: particles

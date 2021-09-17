@@ -150,6 +150,7 @@ Wilkins::build_lowfive()
     std::vector<diy::mpi::communicator> communicators, out_communicators, in_communicators;
     diy::mpi::communicator intercomm, local;
     local = diy::mpi::communicator(this->local_comm_handle());
+    std::string dflowName, full_path, filename, dset;
 
     //I'm a producer
     if (!out_dataflows.empty())
@@ -161,6 +162,13 @@ Wilkins::build_lowfive()
             metadata = df->out_metadata();
             ownership = df->ownership();
 
+            dflowName = df->name();
+            stringstream line(dflowName);
+            std::getline(line, full_path, ':');
+            stringstream line2(full_path);
+            std::getline(line2, filename, '/');
+            dset = full_path.substr(full_path.find("/") + 1);
+
             if (df->sizes()->con_start == df->sizes()->prod_start)
                 intercomm   = local;
             else
@@ -171,7 +179,7 @@ Wilkins::build_lowfive()
                 intercomm = diy::mpi::communicator(intercomm_);
             }
 
-            fmt::print("local.size() = {}, intercomm.size() = {}, passthru = {}, metadata = {}, ownership = {}\n", local.size(), intercomm.size(), passthru, metadata, ownership);
+            fmt::print("local.size() = {}, intercomm.size() = {}, passthru = {}, metadata = {}, ownership = {}, filename = {}, dset = {}\n", local.size(), intercomm.size(), passthru, metadata, ownership, filename, dset);
 
             communicators.push_back(intercomm);
             out_communicators.push_back(intercomm);
@@ -194,7 +202,13 @@ Wilkins::build_lowfive()
             //int out_metadata = pair.first->out_metadata();
 	    //if(out_passthru && !out_metadata)
 	    //	passthru = out_passthru;
-            ownership = pair.first->ownership();
+
+            dflowName = pair.first->name();
+            stringstream line(dflowName);
+            std::getline(line, full_path, ':');
+            stringstream line2(full_path);
+            std::getline(line2, filename, '/');
+            dset = full_path.substr(full_path.find("/") + 1);
 
             if (pair.first->sizes()->prod_start == pair.first->sizes()->con_start)
                 intercomm   = local;
@@ -206,14 +220,10 @@ Wilkins::build_lowfive()
                 intercomm = diy::mpi::communicator(intercomm_);
             }
 
-            fmt::print("local.size() = {}, intercomm.size() = {}, passthru = {}, metadata = {}, ownership = {}\n", local.size(), intercomm.size(), passthru, metadata, ownership);
+            fmt::print("local.size() = {}, intercomm.size() = {}, passthru = {}, metadata = {}, filename = {}, dset = {}\n", local.size(), intercomm.size(), passthru, metadata, filename, dset);
 
             communicators.push_back(intercomm);
             in_communicators.push_back(intercomm);
-
-	    //orc@13-07: wait for data to be ready for the specific intercomm
-            if (passthru && !metadata)
-                intercomm.barrier();
 
         }
 
@@ -228,9 +238,59 @@ Wilkins::build_lowfive()
     l5::DistMetadataVOL vol_plugin(local, communicators, metadata, passthru);
     l5::H5VOLProperty vol_prop(vol_plugin);
     vol_prop.apply(plist_);
-    //orc@20-08: TODO we would need also filename and dataset specified in the json file.
-    if (ownership)
-        vol_plugin.data_ownership("outfile.h5", "/group1/", l5::Dataset::Ownership::lowfive);
+
+    //prod-con related vol_plugin ops: setting ownership and intercomm per dataset
+    //I'm a producer
+    if (!out_dataflows.empty())
+    {
+     	for (Dataflow* df : out_dataflows)
+        {
+
+            dflowName = df->name();
+            stringstream line(dflowName);
+            std::getline(line, full_path, ':');
+            stringstream line2(full_path);
+            std::getline(line2, filename, '/');
+            dset = full_path.substr(full_path.find("/") + 1);
+            dset = "/group1/" + dset; //TODO: discuss handling groups, specify also in the yaml file?
+
+            // set ownership of dataset (default is user (shallow copy), lowfive means deep copy)
+            // filename and full path to dataset can contain '*' and '?' wild cards (ie, globs, not regexes)
+            if (df->ownership())
+                vol_plugin.data_ownership(filename, dset, l5::Dataset::Ownership::lowfive);
+
+         }
+    }
+
+    //I'm a consumer
+    if (!node_in_dataflows.empty())
+    {
+        int index = 0;
+        for (std::pair<Dataflow*, int> pair : node_in_dataflows)
+        {
+
+            dflowName = pair.first->name();
+            stringstream line(dflowName);
+            std::getline(line, full_path, ':');
+            stringstream line2(full_path);
+            std::getline(line2, filename, '/');
+            dset = full_path.substr(full_path.find("/") + 1);
+            dset = "/group1/" + dset; //TODO: discuss handling groups, specify also in the yaml file?
+
+            // set intercomms of dataset
+            // filename and full path to dataset can contain '*' and '?' wild cards (ie, globs, not regexes)
+            //vol_plugin.data_intercomm(filename, dset, pair.second);
+            vol_plugin.data_intercomm(filename, dset, index);
+            index++;
+
+            //orc@13-07: wait for data to be ready for the specific intercomm
+            //orc@17-09: moving here since now we can have multiple intercomms for the same prod-con pair
+	    //placing this after intercomm creation would result in a deadlock therefore
+            if (passthru && !metadata)
+                communicators[index-1].barrier();
+        }
+
+    }
 
     this->intercomms_ = communicators;
     this->out_intercomms_ = out_communicators;

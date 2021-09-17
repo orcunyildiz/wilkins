@@ -34,10 +34,6 @@ void producer_f (Wilkins* wilkins,
 
     communicator local = wilkins->local_comm_handle();
 
-    // set ownership of dataset (default is user (shallow copy), lowfive means deep copy)
-    // filename and full path to dataset can contain '*' and '?' wild cards (ie, globs, not regexes)
-    //vol_plugin.data_ownership("outfile1.h5", "/group1/", l5::Dataset::Ownership::lowfive);
-
     // --- producer ranks running user task code  ---
 
     // diy setup for the producer

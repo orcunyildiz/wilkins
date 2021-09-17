@@ -57,6 +57,7 @@ public:
     int out_metadata();
 
     int ownership();
+    string name();
 
 private:
     CommHandle world_comm_;          // handle to original world communicator
@@ -78,6 +79,8 @@ private:
     int out_passthru_;                   // lowfive-prod: write to file
     int out_metadata_;                   // lowfive-prod: build and use in-memory metadata
     int ownership_;                  // lowfive: set ownership of dataset (default (0) is user (shallow copy), 1 means deep copy)
+
+    string name_;                    //name of the link, used in enforcing ownership (prod) or setting intercomm for dsets (con)
 
 };// End of class Dataflow
 

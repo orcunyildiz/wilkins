@@ -198,7 +198,7 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
                         workflow.links[i].prod = j;
                         workflow.links[i].out_passthru = workflow.nodes[j].passthru;
                         workflow.links[i].out_metadata = workflow.nodes[j].metadata;
-
+                        //workflow.links[i].name = workflow.links[i].name + ":" + workflow.nodes[j].func; //orc@17-09: if needed, we can also obtain prod name here later
                         workflow.nodes.at( j ).out_links.push_back(i);
                         workflow.nodes.at( workflow.links[i].con ).in_links.push_back(i);
                     }
