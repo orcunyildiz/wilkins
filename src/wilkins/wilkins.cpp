@@ -162,6 +162,7 @@ Wilkins::build_lowfive()
             metadata = df->out_metadata();
             ownership = df->ownership();
 
+            //TODO: first set of string ops are only for debugging, delete later.
             dflowName = df->name();
             stringstream line(dflowName);
             std::getline(line, full_path, ':');
@@ -203,6 +204,7 @@ Wilkins::build_lowfive()
 	    //if(out_passthru && !out_metadata)
 	    //	passthru = out_passthru;
 
+            //TODO: first set of string ops are only for debugging, delete later.
             dflowName = pair.first->name();
             stringstream line(dflowName);
             std::getline(line, full_path, ':');
