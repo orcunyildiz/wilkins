@@ -7,8 +7,8 @@ nodes:
     outports:
       - filename: outfile.h5
         dsets:
-          - name: grid
-          - name: particles
+          - name: /group1/grid
+          - name: /group1/particles
   - func: con
     start_proc: 3
     nprocs: 1
@@ -17,7 +17,7 @@ nodes:
     inports:
       - filename: outfile.h5
         dsets:
-          - name: grid
+          - name: /group1/grid
   - func: con2
     start_proc: 4
     nprocs: 1
@@ -26,6 +26,6 @@ nodes:
     inports:
       - filename: outfile.h5
         dsets:
-          - name: particles
+          - name: /group1/particles
 
 

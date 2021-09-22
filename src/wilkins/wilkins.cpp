@@ -254,7 +254,6 @@ Wilkins::build_lowfive()
             stringstream line2(full_path);
             std::getline(line2, filename, '/');
             dset = full_path.substr(full_path.find("/") + 1);
-            dset = "/group1/" + dset; //TODO: discuss handling groups, specify also in the yaml file?
 
             // set ownership of dataset (default is user (shallow copy), lowfive means deep copy)
             // filename and full path to dataset can contain '*' and '?' wild cards (ie, globs, not regexes)
@@ -277,7 +276,6 @@ Wilkins::build_lowfive()
             stringstream line2(full_path);
             std::getline(line2, filename, '/');
             dset = full_path.substr(full_path.find("/") + 1);
-            dset = "/group1/" + dset; //TODO: discuss handling groups, specify also in the yaml file?
 
             // set intercomms of dataset
             // filename and full path to dataset can contain '*' and '?' wild cards (ie, globs, not regexes)

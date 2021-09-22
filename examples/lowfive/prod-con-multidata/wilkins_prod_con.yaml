@@ -2,22 +2,22 @@ nodes:
   - func: prod
     start_proc: 0
     nprocs: 3
-    passthru: 0
-    metadata: 1
+    passthru: 1
+    metadata: 0
     outports:
       - filename: outfile.h5
         dsets:
-          - name: grid
+          - name: /group1/grid
             ownership: 1
-          - name: particles
+          - name: /group1/particles
             ownership: 1
   - func: con
     start_proc: 3
     nprocs: 1
-    passthru: 0
-    metadata: 1
+    passthru: 1
+    metadata: 0
     inports:
       - filename: outfile.h5
         dsets:
-          - name: grid
-          - name: particles
+          - name: /group1/grid
+          - name: /group1/particles
