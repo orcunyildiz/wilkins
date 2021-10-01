@@ -1,11 +1,17 @@
 set                         (targets   producer consumer producer_1 consumer_1_2 consumer_2_2 producer_1_2 producer_2_2 consumer_1)
 
 foreach                     (t ${targets})
-  add_executable            (${t} ${t}.cpp)
-  target_link_libraries     (${t} ${libraries} wilkins)
+    add_library             (${t} SHARED ${t}.cpp)
+    target_link_libraries   (${t} ${libraries} wilkins)
+    set_target_properties   (${t} PROPERTIES PREFIX "")
+    set_target_properties   (${t} PROPERTIES SUFFIX ".so")
 endforeach                  ()
 
-install                     (TARGETS ${targets}
+
+add_executable            (wilkins_master wilkins_master.cpp)
+target_link_libraries     (wilkins_master ${libraries} wilkins)
+
+install                     (TARGETS ${targets} wilkins_master
                             DESTINATION ${CMAKE_INSTALL_PREFIX}/examples/lowfive/prod-con-multidata/
                             PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
                             GROUP_READ GROUP_WRITE GROUP_EXECUTE

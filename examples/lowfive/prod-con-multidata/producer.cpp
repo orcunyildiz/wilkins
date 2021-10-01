@@ -102,13 +102,14 @@ int main(int argc, char* argv[])
 
     int   dim = DIM;
 
-    diy::mpi::environment     env(argc, argv, MPI_THREAD_MULTIPLE);
+    //diy::mpi::environment     env(argc, argv, MPI_THREAD_MULTIPLE);
     diy::mpi::communicator    world;
 
     // create wilkins
-    Wilkins* wilkins = new Wilkins(MPI_COMM_WORLD, "wilkins_prod_con.yaml");
+    std::string config_file = argv[1];
+    Wilkins* wilkins = new Wilkins(MPI_COMM_WORLD, config_file);
 
-    fmt::print("Halo from Wilkins\n");
+    fmt::print("Halo from Wilkins with configuration for {}\n", config_file.c_str());
 
     int                       global_nblocks    = world.size();   // global number of blocks
     int                       mem_blocks        = -1;             // all blocks in memory

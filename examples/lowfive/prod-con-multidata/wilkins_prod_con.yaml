@@ -1,5 +1,5 @@
 nodes:
-  - func: prod
+  - func: producer
     start_proc: 0
     nprocs: 3
     passthru: 1
@@ -11,7 +11,7 @@ nodes:
             ownership: 1
           - name: /group1/particles
             ownership: 1
-  - func: con
+  - func: consumer
     start_proc: 3
     nprocs: 1
     passthru: 1

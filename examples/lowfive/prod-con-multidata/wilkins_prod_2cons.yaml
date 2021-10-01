@@ -1,5 +1,5 @@
 nodes:
-  - func: prod
+  - func: producer_1
     start_proc: 0
     nprocs: 3
     passthru: 1
@@ -9,7 +9,7 @@ nodes:
         dsets:
           - name: /group1/grid
           - name: /group1/particles
-  - func: con
+  - func: consumer_1_2
     start_proc: 3
     nprocs: 1
     passthru: 1
@@ -18,7 +18,7 @@ nodes:
       - filename: outfile.h5
         dsets:
           - name: /group1/grid
-  - func: con2
+  - func: consumer_2_2
     start_proc: 4
     nprocs: 1
     passthru: 1
