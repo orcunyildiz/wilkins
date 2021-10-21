@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
 
     for (size_t i = 0; i < workflow.nodes.size(); i++)
     {
-        std::string task_exec    = workflow.nodes[i].func  + ".so";
+        std::string task_exec    = "./" + workflow.nodes[i].func  + ".so";
         int start_proc           = workflow.nodes[i].start_proc;
         int nprocs               = workflow.nodes[i].nprocs;
 

@@ -44,8 +44,7 @@ set                         (libraries ${libraries} yaml-cpp::yaml-cpp)
 
 # Set include directories
 set                         (CMAKE_INCLUDE_SYSTEM_FLAG_CXX "-isystem")
-include_directories         (${Boost_INCLUDE_DIRS}
-                             ${CMAKE_CURRENT_BINARY_DIR}
+include_directories         (${CMAKE_CURRENT_BINARY_DIR}
                              ${CMAKE_CURRENT_SOURCE_DIR}
                              ${CMAKE_CURRENT_SOURCE_DIR}/include
                              SYSTEM ${MPI_INCLUDE_PATH})

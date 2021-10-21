@@ -1,10 +1,10 @@
-add_library             (wilkins SHARED     comm.cpp
+add_library             (wilkins            comm.cpp
 				            dataflow.cpp
                                             wilkins.cpp
                                             workflow.cpp)
 
 target_link_libraries   (wilkins
-                        ${libraries} ${EXTRA_FLAGS} ${Boost_LIBRARIES} )
+                        ${libraries} ${EXTRA_FLAGS})
 
 install                 (TARGETS wilkins
                         DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/
