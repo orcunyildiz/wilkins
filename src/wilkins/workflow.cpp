@@ -30,8 +30,11 @@ Workflow::my_in_link(int proc, int link)      // whether my process gets input d
         {
             for (size_t j = 0; j < nodes[i].in_links.size(); j++)
             {
-                if (nodes[i].in_links[j] == link)
+                if (nodes[i].in_links[j] == link && links[link].name.find(nodes[i].func) != string::npos) //orc@21-10: rank is not enough to separate in TP mode, using also node func
+                {
+                    //fprintf(stderr, "my_in_link: node name is %s and link name is %s\n", nodes[i].func.c_str(), links[link].name.c_str());
                     return true;
+                }
             }
         }
     }
@@ -48,8 +51,11 @@ Workflow::my_out_link(int proc, int link)      // whether my process puts output
         {
             for (size_t j = 0; j < nodes[i].out_links.size(); j++)
             {
-                if (nodes[i].out_links[j] == link)
+                if (nodes[i].out_links[j] == link && links[link].name.find(nodes[i].func) == string::npos) //orc@21-10: rank is not enough to separate in TP mode, using also node func
+                {
+                    //fprintf(stderr, "my_OUT_link: node name is %s and link name is %s\n", nodes[i].func.c_str(), links[link].name.c_str());
                     return true;
+                }
             }
         }
     }

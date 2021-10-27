@@ -16,6 +16,7 @@
 #include <wilkins/types.hpp>
 #include <wilkins/comm.hpp>
 #include <wilkins/workflow.hpp>
+#include <wilkins/context.h>
 
 //lowfive headers
 #include    "hdf5.h"
@@ -71,7 +72,9 @@ public:
 
     hid_t plist();
 
-    l5::DistMetadataVOL build_lowfive();
+    l5::DistMetadataVOL build_lowfive(); //orc@27-10: deprecated, will delete later. Keeping it as reference for the time being.
+    l5::DistMetadataVOL init();
+    vector<diy::mpi::communicator> build_intercomms();
 
     //orc@14-07: used in lowfive prod for signalling that data is ready
     void commit();

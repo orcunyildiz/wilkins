@@ -2,8 +2,8 @@ nodes:
   - func: producer
     start_proc: 0
     nprocs: 3
-    passthru: 1
-    metadata: 0
+    passthru: 0
+    metadata: 1
     outports:
       - filename: outfile.h5
         dsets:
@@ -14,8 +14,8 @@ nodes:
   - func: consumer
     start_proc: 3
     nprocs: 1
-    passthru: 1
-    metadata: 0
+    passthru: 0
+    metadata: 1
     inports:
       - filename: outfile.h5
         dsets:

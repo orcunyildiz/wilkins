@@ -25,7 +25,7 @@ void consumer2_f (Wilkins* wilkins,
 {
     fmt::print("Entered consumer2\n");
 
-    l5::DistMetadataVOL vol_plugin = wilkins->build_lowfive();
+    l5::DistMetadataVOL vol_plugin = wilkins->init();
     hid_t plist = wilkins->plist();
 
     communicator local = wilkins->local_comm_handle();
@@ -98,7 +98,11 @@ int main(int argc, char* argv[])
 
     int   dim = DIM;
 
-    //diy::mpi::environment     env(argc, argv, MPI_THREAD_MULTIPLE);
+    //orc@26-10: Running under MPMD mode, no wilkins_master
+    if(!wilkins_master())
+        MPI_Init(NULL, NULL);
+        //diy::mpi::environment     env(argc, argv, MPI_THREAD_MULTIPLE);
+
     diy::mpi::communicator    world;
 
     // create wilkins
@@ -144,4 +148,7 @@ int main(int argc, char* argv[])
     int con_nblocks = pow(2, dim) * global_nblocks;
 
     consumer2_f(wilkins, prefix, threads, mem_blocks, con_nblocks);
+
+    if(!wilkins_master())
+        MPI_Finalize();
 }

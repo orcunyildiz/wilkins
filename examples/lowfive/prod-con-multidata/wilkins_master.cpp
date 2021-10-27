@@ -6,6 +6,7 @@
 using communicator = diy::mpi::communicator;
 
 #include <wilkins/wilkins.hpp>
+#include <wilkins/context.h>
 
 using namespace wilkins;
 
@@ -19,8 +20,17 @@ int main(int argc, char* argv[])
     std::string config_file = argv[1];
     Workflow::make_wflow_from_yaml(workflow, config_file);
 
+    Wilkins* wilkins = new Wilkins(MPI_COMM_WORLD, config_file);
+
     std::vector<void*> vec_dlsym;
     std::vector<int> myTasks;
+
+    communicator local = wilkins->local_comm_handle();
+    communicator local_dup;
+    local_dup.duplicate(local); //orc@27-10: we might need to duplicate intercomms as well later for TP or we might need to use world duplicates for both
+
+    std::vector<communicator> intercomms = wilkins->build_intercomms();
+    //fmt::print("MASTER: intercomm.size() = {}\n",intercomms[0].size());
 
     for (size_t i = 0; i < workflow.nodes.size(); i++)
     {
@@ -43,7 +53,17 @@ int main(int argc, char* argv[])
         if (!task_main_)
             fmt::print(stderr, "Couldn't find main at task {}\n",task_exec.c_str());
 
+        void* task_intercomm_ = dlsym(lib_task, "wilkins_set_intercomms");
+        if (!task_intercomm_)
+            fmt::print(stderr, "Couldn't find task set_intercomms at task {}\n",task_exec.c_str());
+
+        void* task_local_comm_ = dlsym(lib_task, "wilkins_set_local_comm");
+        if (!task_local_comm_)
+            fmt::print(stderr, "Couldn't find task set_local_comm at task {}\n",task_exec.c_str());
+
         vec_dlsym.emplace_back(task_main_);
+        vec_dlsym.emplace_back(task_intercomm_);
+        vec_dlsym.emplace_back(task_local_comm_);
     }
 
     if (myTasks.size() > 1)
@@ -56,9 +76,21 @@ int main(int argc, char* argv[])
         //SP mode
         auto task_main = [&]()
         {
-            ((void (*) (int, char**)) (vec_dlsym[myTasks[0]]))(argc, argv);
+            ((void (*) (int, char**)) (vec_dlsym[(3 * myTasks[0])]))(argc, argv);
         };
 
+        auto task_intercomm = [&]()
+        {
+            ((void (*) (void*)) (vec_dlsym[(3*myTasks[0])+1]))(&intercomms);
+        };
+
+        auto task_local_comm = [&]()
+        {
+            ((void (*) (void*)) (vec_dlsym[(3*myTasks[0])+2]))(&local_dup);
+        };
+
+        task_intercomm();
+	task_local_comm();
         task_main();
 
     }

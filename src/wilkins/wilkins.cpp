@@ -137,7 +137,162 @@ Wilkins::con_comm_handle()
 }
 
 
+l5::DistMetadataVOL
+wilkins::
+Wilkins::init()
+{
 
+    std::string dflowName, full_path, filename, dset;
+    std::vector<diy::mpi::communicator> communicators;
+
+    diy::mpi::communicator local;
+
+    //orc@26-10: if not wilkins_master, MPMD mode, creating comms ourselves
+    if (!wilkins_master())
+    {
+     	communicators = this->build_intercomms();
+        local = this->local_comm_handle();
+    }
+    else
+    {
+        communicators = wilkins_get_intercomms();
+        local = wilkins_get_local_comm();
+    }
+
+    //orc@25-10: for now giving hardcoded since will adapt these flags to refactoring branch of lowfive
+    int passthru = 0;
+    int metadata = 1;
+
+    // set up file access property list
+    this->plist_ =  H5Pcreate(H5P_FILE_ACCESS);
+    if (passthru)
+        H5Pset_fapl_mpio(plist_, local, MPI_INFO_NULL);
+
+    // set up lowfive
+    l5::DistMetadataVOL vol_plugin(local, communicators, metadata, passthru);
+    l5::H5VOLProperty vol_prop(vol_plugin);
+    vol_prop.apply(plist_);
+
+    //prod-con related vol_plugin ops: setting ownership and intercomm per dataset
+    //I'm a producer
+    if (!out_dataflows.empty())
+    {
+        for (Dataflow* df : out_dataflows)
+        {
+
+            dflowName = df->name();
+            stringstream line(dflowName);
+            std::getline(line, full_path, ':');
+            stringstream line2(full_path);
+            std::getline(line2, filename, '/');
+            dset = full_path.substr(full_path.find("/") + 1);
+
+            // set ownership of dataset (default is user (shallow copy), lowfive means deep copy)
+            // filename and full path to dataset can contain '*' and '?' wild cards (ie, globs, not regexes)
+            if (df->ownership())
+                vol_plugin.data_ownership(filename, dset, l5::Dataset::Ownership::lowfive);
+
+         }
+    }
+
+    //I'm a consumer
+    if (!node_in_dataflows.empty())
+    {
+        int index = 0;
+        for (std::pair<Dataflow*, int> pair : node_in_dataflows)
+        {
+
+            dflowName = pair.first->name();
+            stringstream line(dflowName);
+            std::getline(line, full_path, ':');
+            stringstream line2(full_path);
+            std::getline(line2, filename, '/');
+            dset = full_path.substr(full_path.find("/") + 1);
+
+            // set intercomms of dataset
+            // filename and full path to dataset can contain '*' and '?' wild cards (ie, globs, not regexes)
+            //vol_plugin.data_intercomm(filename, dset, pair.second);
+            vol_plugin.data_intercomm(filename, dset, index);
+            index++;
+
+            //orc@13-07: wait for data to be ready for the specific intercomm
+            //orc@17-09: moving here since now we can have multiple intercomms for the same prod-con pair
+            //placing this after intercomm creation would result in a deadlock therefore
+            if (passthru && !metadata)
+                communicators[index-1].barrier();
+        }
+
+    }
+
+    return vol_plugin;
+
+}
+
+std::vector<diy::mpi::communicator>
+wilkins::
+Wilkins::build_intercomms()
+{
+
+    std::vector<diy::mpi::communicator> communicators, out_communicators, in_communicators;
+    diy::mpi::communicator intercomm, local;
+    local = diy::mpi::communicator(this->local_comm_handle());
+
+    //I'm a producer
+    if (!out_dataflows.empty())
+    {
+
+        for (Dataflow* df : out_dataflows)
+        {
+            if (df->sizes()->con_start == df->sizes()->prod_start)
+                intercomm   = local;
+            else
+            {
+                MPI_Comm intercomm_;
+                int remote_leader = df->sizes()->con_start;
+                MPI_Intercomm_create(local, 0, world_comm_, remote_leader,  0, &intercomm_);
+                intercomm = diy::mpi::communicator(intercomm_);
+            }
+
+            fmt::print("local.size() = {}, intercomm.size() = {}\n", local.size(), intercomm.size());
+
+            communicators.push_back(intercomm);
+            out_communicators.push_back(intercomm);
+
+        }
+
+    }
+
+    //I'm a consumer
+    if (!node_in_dataflows.empty())
+    {
+
+     	for (std::pair<Dataflow*, int> pair : node_in_dataflows)
+        {
+
+            if (pair.first->sizes()->prod_start == pair.first->sizes()->con_start)
+                intercomm   = local;
+            else
+            {
+                MPI_Comm intercomm_;
+                int remote_leader = pair.first->sizes()->prod_start;
+                MPI_Intercomm_create(local, 0, world_comm_, remote_leader,  0, &intercomm_);
+                intercomm = diy::mpi::communicator(intercomm_);
+            }
+
+            fmt::print("local.size() = {}, intercomm.size() = {}\n", local.size(), intercomm.size());
+
+            communicators.push_back(intercomm);
+            in_communicators.push_back(intercomm);
+
+        }
+
+    }
+
+    return communicators;
+
+}
+
+//orc@26-10: deprecated
 l5::DistMetadataVOL
 wilkins::
 Wilkins::build_lowfive()
@@ -380,6 +535,10 @@ CommHandle
 wilkins::
 Wilkins::local_comm_handle()
 {
+
+    if (wilkins_master())
+        return wilkins_get_local_comm();
+
     // We are the consumer in the inbound dataflow
     if (!node_in_dataflows.empty())
         return node_in_dataflows[0].first->con_comm_handle();
