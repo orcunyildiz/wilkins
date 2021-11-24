@@ -211,8 +211,10 @@ Wilkins::init()
 
             // set intercomms of dataset
             // filename and full path to dataset can contain '*' and '?' wild cards (ie, globs, not regexes)
-            //vol_plugin.data_intercomm(filename, dset, pair.second);
-            vol_plugin.data_intercomm(filename, dset, index);
+            if (communicators.size()==1)
+                vol_plugin.data_intercomm(filename, dset, 0); //orc@05-11: In TP, need to increment/set index differently
+            else
+                vol_plugin.data_intercomm(filename, dset, index);
             index++;
 
             //orc@13-07: wait for data to be ready for the specific intercomm
@@ -228,15 +230,75 @@ Wilkins::init()
 
 }
 
+std::vector<int>
+wilkins::
+Wilkins::build_intercomms(std::string task_name)
+{
+
+    std::vector<int> shared_communicators;
+
+    std::vector<std::string> shared_dataflows;
+    //I'm a producer
+    if (!out_dataflows.empty())
+    {
+
+     	for (Dataflow* df : out_dataflows)
+        {
+            if (df->sizes()->con_start == df->sizes()->prod_start)
+            {
+             	if(std::find(shared_dataflows.begin(), shared_dataflows.end(), df->name()) == shared_dataflows.end())
+                {
+                    shared_dataflows.push_back(df->name());
+                    if(df->fullName().find(task_name) != std::string::npos)
+                        shared_communicators.push_back(1);
+                    else
+                        shared_communicators.push_back(0);
+                }
+            }
+
+	}
+
+    }
+
+
+    //I'm a consumer
+    if (!node_in_dataflows.empty())
+    {
+
+        for (std::pair<Dataflow*, int> pair : node_in_dataflows)
+        {
+
+            if (pair.first->sizes()->prod_start == pair.first->sizes()->con_start)
+            {
+             	if(std::find(shared_dataflows.begin(), shared_dataflows.end(), pair.first->name()) == shared_dataflows.end()) //  && pair.first->fullName().find(task_name) != std::string::npos)
+                {
+                    shared_dataflows.push_back(pair.first->name());
+                    if(pair.first->fullName().find(task_name) != std::string::npos)
+                        shared_communicators.push_back(1);
+                    else
+                        shared_communicators.push_back(0);
+                }
+            }
+
+        }
+
+    }
+
+    return shared_communicators;
+}
+
 std::vector<diy::mpi::communicator>
 wilkins::
 Wilkins::build_intercomms()
 {
 
     std::vector<diy::mpi::communicator> communicators, out_communicators, in_communicators;
-    diy::mpi::communicator intercomm, local;
-    local = diy::mpi::communicator(this->local_comm_handle());
+    diy::mpi::communicator intercomm, local_orig;
+    local_orig = diy::mpi::communicator(this->local_comm_handle());
+    diy::mpi::communicator local;
+    local.duplicate(local_orig);
 
+    std::vector<std::string> shared_dataflows;
     //I'm a producer
     if (!out_dataflows.empty())
     {
@@ -244,19 +306,24 @@ Wilkins::build_intercomms()
         for (Dataflow* df : out_dataflows)
         {
             if (df->sizes()->con_start == df->sizes()->prod_start)
-                intercomm   = local;
+            {
+                if(std::find(shared_dataflows.begin(), shared_dataflows.end(), df->name()) == shared_dataflows.end())
+                {
+                    intercomm.duplicate(local_orig); //orc@05-11: need duplicate intercomms for the shared mode
+                    shared_dataflows.push_back(df->name());
+                    communicators.push_back(intercomm);
+                    out_communicators.push_back(intercomm);
+                }
+            }
             else
             {
                 MPI_Comm intercomm_;
                 int remote_leader = df->sizes()->con_start;
                 MPI_Intercomm_create(local, 0, world_comm_, remote_leader,  0, &intercomm_);
                 intercomm = diy::mpi::communicator(intercomm_);
+                communicators.push_back(intercomm);
+                out_communicators.push_back(intercomm);
             }
-
-            fmt::print("local.size() = {}, intercomm.size() = {}\n", local.size(), intercomm.size());
-
-            communicators.push_back(intercomm);
-            out_communicators.push_back(intercomm);
 
         }
 
@@ -270,19 +337,24 @@ Wilkins::build_intercomms()
         {
 
             if (pair.first->sizes()->prod_start == pair.first->sizes()->con_start)
-                intercomm   = local;
+            {
+                if(std::find(shared_dataflows.begin(), shared_dataflows.end(), pair.first->name()) == shared_dataflows.end())
+                {
+                    intercomm.duplicate(local_orig); //orc@05-11: need duplicate intercomms for the shared mode
+                    shared_dataflows.push_back(pair.first->name());
+                    communicators.push_back(intercomm);
+                    in_communicators.push_back(intercomm);
+                }
+            }
             else
             {
                 MPI_Comm intercomm_;
                 int remote_leader = pair.first->sizes()->prod_start;
                 MPI_Intercomm_create(local, 0, world_comm_, remote_leader,  0, &intercomm_);
                 intercomm = diy::mpi::communicator(intercomm_);
+                communicators.push_back(intercomm);
+                in_communicators.push_back(intercomm);
             }
-
-            fmt::print("local.size() = {}, intercomm.size() = {}\n", local.size(), intercomm.size());
-
-            communicators.push_back(intercomm);
-            in_communicators.push_back(intercomm);
 
         }
 
@@ -537,15 +609,16 @@ Wilkins::local_comm_handle()
 {
 
     if (wilkins_master())
+    {
         return wilkins_get_local_comm();
+    }
 
-    // We are the consumer in the inbound dataflow
-    if (!node_in_dataflows.empty())
-        return node_in_dataflows[0].first->con_comm_handle();
     // We are the producer in the outbound dataflow
-    else if (!out_dataflows.empty())
+    if (!out_dataflows.empty())
         return out_dataflows[0]->prod_comm_handle();
-
+    // We are the consumer in the inbound dataflow
+    else if (!node_in_dataflows.empty())
+        return node_in_dataflows[0].first->con_comm_handle();
     else
     {
         // We don't have nor inbound not outbound dataflows

@@ -1,4 +1,6 @@
 #include    <thread>
+#include <iostream>
+#include <system_error>
 
 #include    <dlfcn.h>
 
@@ -12,7 +14,6 @@ using namespace wilkins;
 
 int main(int argc, char* argv[])
 {
-
     diy::mpi::environment     env(argc, argv, MPI_THREAD_MULTIPLE);
     diy::mpi::communicator    world;
 
@@ -25,12 +26,21 @@ int main(int argc, char* argv[])
     std::vector<void*> vec_dlsym;
     std::vector<int> myTasks;
 
+    std::vector<std::thread> myThreads;
+    std::thread task_thread;
+
     communicator local = wilkins->local_comm_handle();
     communicator local_dup;
-    local_dup.duplicate(local); //orc@27-10: we might need to duplicate intercomms as well later for TP or we might need to use world duplicates for both
+    local_dup.duplicate(local); //duplicate of the local communicator for SP mode
 
     std::vector<communicator> intercomms = wilkins->build_intercomms();
-    //fmt::print("MASTER: intercomm.size() = {}\n",intercomms[0].size());
+
+    //comm vectors for the shared mode
+    std::vector<communicator*> local_comms;
+    std::vector<std::vector<communicator>> vec_intercomms_shared;
+
+    communicator world_dup;
+    world_dup.duplicate(world);
 
     for (size_t i = 0; i < workflow.nodes.size(); i++)
     {
@@ -68,17 +78,84 @@ int main(int argc, char* argv[])
 
     if (myTasks.size() > 1)
     {
+        //shared (TP) mode
         fmt::print("shared mode with {} tasks sharing the same resources\n", myTasks.size());
-        //TODO TP mode
+
+        //creating local and intercomms
+        for (size_t i = 0; i < workflow.nodes.size(); i++)
+        {
+
+     	    //orc@05-11: creating duplicate local comms for each task
+            communicator* local_dup = new communicator();
+            //local_dup->duplicate(world);
+            local_dup->duplicate(local); //orc@24-10: required for supporting free mixing of TP & SP
+            local_comms.emplace_back(local_dup);
+
+            //orc@05-11: splitting the main intercomm vector per task in the shared mode
+            std::vector<int> intercomms_shared = wilkins->build_intercomms(workflow.nodes[i].func);
+            std::vector<communicator> intercomms_tp;
+
+            for (size_t i = 0; i < intercomms_shared.size(); i++)
+            {
+             	if (intercomms_shared[i] ==1)
+                    intercomms_tp.emplace_back(intercomms[i]);
+
+            }
+
+            vec_intercomms_shared.emplace_back(intercomms_tp);
+
+        }
+
+        for (size_t i = 0; i < myTasks.size(); i++)
+        {
+
+            //set intercomms
+            auto task_intercomm = [&, i]()
+            {
+                ((void (*) (void*)) (vec_dlsym[(3*myTasks[i])+1]))(&vec_intercomms_shared[i]);
+            };
+
+            task_intercomm();
+
+            //set local comms
+            auto task_local_comm = [&, i]()
+            {
+             	((void (*) (void*)) (vec_dlsym[(3*myTasks[i])+2]))(&(*local_comms[i]));
+            };
+
+            task_local_comm();
+
+            //creating the user puppets as threads
+            auto task_main = [&, i]()
+            {
+                ((void (*) (int, char**)) (vec_dlsym[3*myTasks[i]]))(argc, argv);
+            };
+
+            task_thread = std::thread(task_main);
+
+            myThreads.push_back(std::move(task_thread));
+
+        }
+
+        //running the user puppets
+        for(auto& th : myThreads)
+        {
+            try
+            {
+                th.join();
+            }
+            catch(const std::system_error& e)
+            {
+                std::cout << "Caught system_error with code " << e.code()
+                      << " meaning " << e.what() << '\n';
+            }
+
+        }
+
     }
     else if (myTasks.size() == 1)
     {
         //SP mode
-        auto task_main = [&]()
-        {
-            ((void (*) (int, char**)) (vec_dlsym[(3 * myTasks[0])]))(argc, argv);
-        };
-
         auto task_intercomm = [&]()
         {
             ((void (*) (void*)) (vec_dlsym[(3*myTasks[0])+1]))(&intercomms);
@@ -87,6 +164,11 @@ int main(int argc, char* argv[])
         auto task_local_comm = [&]()
         {
             ((void (*) (void*)) (vec_dlsym[(3*myTasks[0])+2]))(&local_dup);
+        };
+
+        auto task_main = [&]()
+        {
+            ((void (*) (int, char**)) (vec_dlsym[(3 * myTasks[0])]))(argc, argv);
         };
 
         task_intercomm();
@@ -100,25 +182,8 @@ int main(int argc, char* argv[])
         exit(1);
     }
 
-    //TODO: cont'd with the shared
+    //cleanup for shared mode
+    for (size_t i = 0; i < local_comms.size(); i++)
+         delete local_comms[i];
 
-/*
-    std::mutex exclusive;
-
-    if (!shared)
-    {
-        if (producer)
-            producer_f();
-        else
-            consumer_f();
-    } else
-    {
-        auto producer_thread = std::thread(producer_f);
-        auto consumer_thread = std::thread(consumer_f);
-
-        producer_thread.join();
-        consumer_thread.join();
-    }
-
-*/
 }

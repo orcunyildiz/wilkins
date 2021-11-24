@@ -58,6 +58,7 @@ struct WorkflowLink                          /// a dataflow
     int prod;                       // index in vector of all workflow nodes of producer
     int con;                        // index in vector of all workflow nodes of consumer
     string name;                    ///< name of the link. Should be unique in the workflow
+    string fullName;                ///< name of the link, which also includes source/producer.
 
     int tokens;                     ///< number of empty messages to receive on destPort before a real get (for supporting cycles)
     int in_passthru;		    ///< "lowfive-con: write file to disk"

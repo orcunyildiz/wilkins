@@ -10,6 +10,7 @@
 #include <string>
 #include <regex>
 #include <vector>
+#include <algorithm>
 
 #include <wilkins/dataflow.hpp>
 
@@ -75,7 +76,7 @@ public:
     l5::DistMetadataVOL build_lowfive(); //orc@27-10: deprecated, will delete later. Keeping it as reference for the time being.
     l5::DistMetadataVOL init();
     vector<diy::mpi::communicator> build_intercomms();
-
+    vector<int> build_intercomms(std::string task_name); //orc@05-11: used for shared mode
     //orc@14-07: used in lowfive prod for signalling that data is ready
     void commit();
 

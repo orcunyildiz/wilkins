@@ -19,6 +19,7 @@
 #include <wilkins/types.hpp>
 
 #include <wilkins/workflow.hpp>
+#include <wilkins/context.h>
 
 #include <memory>
 #include <queue>
@@ -58,6 +59,7 @@ public:
 
     int ownership();
     string name();
+    string fullName();
 
 private:
     CommHandle world_comm_;          // handle to original world communicator
@@ -81,6 +83,7 @@ private:
     int ownership_;                  // lowfive: set ownership of dataset (default (0) is user (shallow copy), 1 means deep copy)
 
     string name_;                    //name of the link, used in enforcing ownership (prod) or setting intercomm for dsets (con)
+    string fullName_;                //name of the link with the source/producer of the link, used for differentiating links where the rank info is not sufficient (shared mode)
 
 };// End of class Dataflow
 

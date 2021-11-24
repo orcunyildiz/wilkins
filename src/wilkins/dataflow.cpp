@@ -7,6 +7,13 @@ Dataflow::name()
     return name_;
 }
 
+string
+wilkins::
+Dataflow::fullName()
+{
+    return fullName_;
+}
+
 int
 wilkins::
 Dataflow::in_passthru()
@@ -135,23 +142,27 @@ Dataflow::Dataflow(CommHandle world_comm,
     ownership_ = wflowLink.ownership;
 
     name_ = wflowLink.name;
+    fullName_ = wflowLink.fullName;
 
-    // communicators
-
-    if (world_rank_ >= sizes_.prod_start &&                   // producer
-            world_rank_ < sizes_.prod_start + sizes_.prod_size)
+    // communicator creation -- only applies to MPMD mode for the user codes
+    if (!wilkins_master())
     {
-        type_ |= WILKINS_PRODUCER_COMM;
-        prod_comm_ = new Comm(world_comm, sizes_.prod_start, sizes_.prod_start + sizes_.prod_size - 1);
-    }
+        if (world_rank_ >= sizes_.prod_start &&                   // producer
+                world_rank_ < sizes_.prod_start + sizes_.prod_size)
+        {
+            type_ |= WILKINS_PRODUCER_COMM;
+            prod_comm_ = new Comm(world_comm, sizes_.prod_start, sizes_.prod_start + sizes_.prod_size - 1);
+        }
 
-    if (world_rank_ >= sizes_.con_start &&                    // consumer
-            world_rank_ < sizes_.con_start + sizes_.con_size)
-    {
-        type_ |= WILKINS_CONSUMER_COMM;
-        con_comm_ = new Comm(world_comm, sizes_.con_start, sizes_.con_start + sizes_.con_size - 1);
+        if (world_rank_ >= sizes_.con_start &&                    // consumer
+                world_rank_ < sizes_.con_start + sizes_.con_size  && sizes_.con_start!=sizes_.prod_start) //orc@08-11: last if condition is to prevent duplicate comms in TP mode
+        {
+            type_ |= WILKINS_CONSUMER_COMM;
+            con_comm_ = new Comm(world_comm, sizes_.con_start, sizes_.con_start + sizes_.con_size - 1);
 
-        tokens_ = wflowLink.tokens;
+            tokens_ = wflowLink.tokens;
+        }
+
     }
 
 }
@@ -159,10 +170,15 @@ Dataflow::Dataflow(CommHandle world_comm,
 wilkins::
 Dataflow::~Dataflow()
 {
-    if (is_prod())
-        delete prod_comm_;
-    if (is_con())
-        delete con_comm_;
+
+    if (!wilkins_master())
+    {
+        if (is_prod())
+            delete prod_comm_;
+        if (is_con())
+            delete con_comm_;
+    }
+
 }
 
 

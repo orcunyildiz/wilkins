@@ -51,9 +51,10 @@ Workflow::my_out_link(int proc, int link)      // whether my process puts output
         {
             for (size_t j = 0; j < nodes[i].out_links.size(); j++)
             {
+                //orc@05-11: TODO: use fullName instead of name
                 if (nodes[i].out_links[j] == link && links[link].name.find(nodes[i].func) == string::npos) //orc@21-10: rank is not enough to separate in TP mode, using also node func
                 {
-                    //fprintf(stderr, "my_OUT_link: node name is %s and link name is %s\n", nodes[i].func.c_str(), links[link].name.c_str());
+                    //fprintf(stderr, "my_OUT_link: node name is %s and link name is %s, and link src is %s\n", nodes[i].func.c_str(), links[link].name.c_str(), links[link].fullName.c_str());
                     return true;
                 }
             }
@@ -204,7 +205,7 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
                         workflow.links[i].prod = j;
                         workflow.links[i].out_passthru = workflow.nodes[j].passthru;
                         workflow.links[i].out_metadata = workflow.nodes[j].metadata;
-                        //workflow.links[i].name = workflow.links[i].name + ":" + workflow.nodes[j].func; //orc@17-09: if needed, we can also obtain prod name here later
+                        workflow.links[i].fullName = workflow.links[i].name + ":" + workflow.nodes[j].func; //orc@17-09: obtaining also prod name for the shared mode
                         workflow.nodes.at( j ).out_links.push_back(i);
                         workflow.nodes.at( workflow.links[i].con ).in_links.push_back(i);
                     }
