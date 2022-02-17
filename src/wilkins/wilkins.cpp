@@ -109,13 +109,6 @@ Wilkins::build_dataflows(vector<Dataflow*>& dataflows)
     }
 }
 
-std::vector<diy::mpi::communicator>
-wilkins::
-Wilkins::intercomms()
-{
-        return intercomms_;
-}
-
 CommHandle
 wilkins::
 Wilkins::prod_comm_handle()

@@ -44,10 +44,6 @@ public:
     //! returns the total number of dataflows build by this instance of wilkins
     unsigned int nb_dataflows();
 
-     //orc@12-07
-    //! returns a handle for this node's intercomm
-    vector<diy::mpi::communicator> intercomms();
-
     //! returns a handle for this node's producer communicator
     CommHandle prod_comm_handle();
     //! returns a handle for this node's consumer communicator
@@ -103,9 +99,12 @@ private:
     //orc@12-07: plist that will be provided to the user code
     hid_t plist_;
 
-    vector<diy::mpi::communicator> intercomms_;                      // intercommunicators
+    //orc@27-10: deprecated as they are used in build_lowfive(), which is deprecated as well.
+    //NB: out_intercomms_ is used also in commit().
+    //TODO: omit them once commit() is ready to be updated, which is waiting on the L5 design finalization.
+    vector<diy::mpi::communicator> intercomms_;                          // intercommunicators
     vector<diy::mpi::communicator> out_intercomms_;                      // out_intercommunicator (prod)
-    vector<diy::mpi::communicator> in_intercomms_;                      // in_intercommunicator (con)
+    vector<diy::mpi::communicator> in_intercomms_;                       // in_intercommunicator (con)
 
 };
 
