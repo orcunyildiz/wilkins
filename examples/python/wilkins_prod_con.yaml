@@ -1,0 +1,23 @@
+nodes:
+  - func: producer
+    start_proc: 0
+    nprocs: 3
+    passthru: 0
+    metadata: 1
+    outports:
+      - filename: outfile.h5
+        dsets:
+          - name: /group1/grid
+            ownership: 1
+          - name: /group1/particles
+            ownership: 1
+  - func: consumer
+    start_proc: 3
+    nprocs: 1
+    passthru: 0
+    metadata: 1
+    inports:
+      - filename: outfile.h5
+        dsets:
+          - name: /group1/grid
+          - name: /group1/particles
