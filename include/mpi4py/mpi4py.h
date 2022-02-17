@@ -1,1 +1,26 @@
-/blues/gpfs/home/oyildiz/software/spack/opt/spack/linux-centos7-broadwell/gcc-7.1.0/py-mpi4py-3.0.3-uqrewpqhtbrjx4pnajdkvp4ojwtu7gb3/lib/python3.8/site-packages/mpi4py/include/mpi4py/mpi4py.h
+/* Author:  Lisandro Dalcin   */
+/* Contact: dalcinl@gmail.com */
+
+
+#ifndef MPI4PY_H
+#define MPI4PY_H
+
+#include "mpi.h"
+
+#if (MPI_VERSION < 3) && !defined(PyMPI_HAVE_MPI_Message)
+typedef void *PyMPI_MPI_Message;
+#define MPI_Message PyMPI_MPI_Message
+#endif
+
+#include "mpi4py.MPI_api.h"
+
+static int import_mpi4py(void) {
+  if (import_mpi4py__MPI() < 0) goto bad;
+  return 0;
+ bad:
+  return -1;
+}
+
+#endif /* MPI4PY_H */
+
+//required header for C API of mpi4py

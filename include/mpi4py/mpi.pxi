@@ -1,1 +1,4 @@
-/blues/gpfs/home/oyildiz/software/spack/opt/spack/linux-centos7-broadwell/gcc-7.1.0/py-mpi4py-3.0.3-uqrewpqhtbrjx4pnajdkvp4ojwtu7gb3/lib/python3.8/site-packages/mpi4py/include/mpi4py/mpi.pxi
+# Author:  Lisandro Dalcin
+# Contact: dalcinl@gmail.com
+
+include "../../libmpi.pxd"
