@@ -152,7 +152,7 @@ Wilkins::init()
         local = wilkins_get_local_comm();
     }
 
-    //orc@25-10: for now giving hardcoded since will adapt these flags to refactoring branch of lowfive
+    //orc@21-02: default values for passthru/metadata
     int passthru = 0;
     int metadata = 1;
 
@@ -185,11 +185,13 @@ Wilkins::init()
             if (!df->ownership())
                 vol_plugin.set_zerocopy(filename, dset);
 
-            // set passthru/memory at dataset level TODO: for now using default values, obtain them thru YAML file like below (df->out_passthru()).
-            if (passthru)
-                vol_plugin.set_passthru(filename, dset);
-            if (metadata)
-                vol_plugin.set_memory(filename, dset);
+            // set passthru/memory at dataset level. TODO: L5 Pattern should work for dset name as well, for now using * since dset doesn't work for passthru.
+            if (df->out_passthru())
+                //vol_plugin.set_passthru(filename, dset);
+                vol_plugin.set_passthru(filename, "*");
+            if (df->out_metadata())
+                //vol_plugin.set_memory(filename, dset);
+                vol_plugin.set_memory(filename, "*");
 
 	    fmt::print("PRODUCER:passthru = {}, metadata = {}, ownership = {}, filename = {}, dset = {}\n", df->out_passthru(), df->out_metadata(), df->ownership(), filename, dset);
 
@@ -218,22 +220,24 @@ Wilkins::init()
                 vol_plugin.set_intercomm(filename, dset, index);
             index++;
 
-            // set passthru/memory at dataset level TODO: for now using default values, obtain them thru YAML file  like below (pair.first->in_passthru()) (in addition to default values).
-            if (passthru)
-                vol_plugin.set_passthru(filename, dset);
-            if (metadata)
-                vol_plugin.set_memory(filename, dset);
+            // set passthru/memory at dataset level TODO: L5 Pattern should work for dset name as well, for now using * since dset doesn't work for passthru.
+            if (pair.first->in_passthru())
+                //vol_plugin.set_passthru(filename, dset);
+                vol_plugin.set_passthru(filename, "*");
+            if (pair.first->in_metadata())
+                //vol_plugin.set_memory(filename, dset);
+                vol_plugin.set_memory(filename, "*");
 
             fmt::print("CONSUMER: passthru = {}, metadata = {}, filename = {}, dset = {}\n", pair.first->in_passthru(), pair.first->in_metadata(), filename, dset);
 
             //orc@13-07: wait for data to be ready for the specific intercomm
             //orc@17-09: moving here since now we can have multiple intercomms for the same prod-con pair
             //placing this after intercomm creation would result in a deadlock therefore
-            if (passthru && !metadata)
+            if (pair.first->in_passthru() && !pair.first->in_metadata())
                 communicators[index-1].barrier();
         }
 
-    }
+    } //endif consumer
 
     return vol_plugin;
 
@@ -368,6 +372,11 @@ Wilkins::build_intercomms()
         }
 
     }
+
+    //orc@21-02: required for the commit function
+    this->intercomms_ = communicators;
+    this->out_intercomms_ = out_communicators;
+    this->in_intercomms_ = in_communicators;
 
     return communicators;
 
@@ -550,11 +559,18 @@ wilkins::
 Wilkins::commit()
 {
 
+    std::vector<diy::mpi::communicator> intercomms;
+
+    if (!wilkins_master())
+        intercomms = this->out_intercomms_;
+    else
+        intercomms = wilkins_get_intercomms(); //TODO: for wilkins_master, use out_intercomms_ as well.
+
     int i = 0;
     for (Dataflow* df : out_dataflows)
     {
         if (df->out_passthru() && !df->out_metadata())
-	    this->out_intercomms_[i].barrier();
+                intercomms[i].barrier();
 
         i++;
     }
