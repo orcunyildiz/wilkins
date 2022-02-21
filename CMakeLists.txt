@@ -67,6 +67,4 @@ add_subdirectory            (src)
 add_subdirectory            (examples)
 
 #python bindings
-#TODO: when shifting to latest version of L5, move pybind11 (and mpi4py) into peru
-add_subdirectory            (include/pybind11)
 add_subdirectory            (bindings/python)
