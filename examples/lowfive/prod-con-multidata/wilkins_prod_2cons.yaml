@@ -2,30 +2,32 @@ nodes:
   - func: producer_1
     start_proc: 0
     nprocs: 3
-    passthru: 0
-    metadata: 1
     outports:
       - filename: outfile.h5
         dsets:
           - name: /group1/grid
+            passthru: 1
+            metadata: 1
           - name: /group1/particles
+            passthru: 1
+            metadata: 1
   - func: consumer_1_2
     start_proc: 3
     nprocs: 1
-    passthru: 0
-    metadata: 1
     inports:
       - filename: outfile.h5
         dsets:
           - name: /group1/grid
+            passthru: 1
+            metadata: 1
   - func: consumer_2_2
     start_proc: 4
     nprocs: 1
-    passthru: 0
-    metadata: 1
     inports:
       - filename: outfile.h5
         dsets:
           - name: /group1/particles
+            passthru: 1
+            metadata: 1
 
 
