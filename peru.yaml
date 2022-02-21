@@ -4,8 +4,8 @@ imports:
 
 git module yaml-cpp:
     url: git://github.com/jbeder/yaml-cpp.git
-    rev: 6308112e54fe41a3bc1ceeb2b807f0d09f15a1e9
+    rev: edadfecdc644e2a75ef6074e7afe74a3ebb44078
 
 git module lowfive:
-    url: ssh://git@bitbucket.org/tpeterka1/lowfive.git
-    rev: d2230bcb1e856714c59a00f316e1dda8de083868
+    url: ssh://git@github.com/diatomic/lowfive
+    rev: f9d2afd47084051957dc949ce150d58fc32f076b

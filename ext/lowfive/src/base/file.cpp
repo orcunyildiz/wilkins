@@ -1,4 +1,6 @@
 #include <lowfive/vol-base.hpp>
+#include <fmt/core.h>
+#include <fmt/format.h>
 
 /*-------------------------------------------------------------------------
  * Function:    file_create
@@ -20,17 +22,23 @@ _file_create(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id, hid
     void *under;
 
 #ifdef LOWFIVE_ENABLE_PASSTHRU_LOGGING
-    printf("------- PASS THROUGH VOL FILE Create\n");
+    fprintf(stderr, "------- PASS THROUGH VOL FILE Create\n");
 #endif
 
     /* Get copy of our VOL info from FAPL */
     H5Pget_vol_info(fapl_id, (void **)&info);
 
+    fmt::print("got vol info: {} with vol {}\n", fmt::ptr(info), fmt::ptr(info->vol));
+
     /* Copy the FAPL */
     under_fapl_id = H5Pcopy(fapl_id);
 
+    fmt::print("fapl copied\n");
+
     /* Set the VOL ID and info for the underlying FAPL */
     H5Pset_vol(under_fapl_id, info->under_vol_id, info->under_vol_info);
+
+    fmt::print("info->vol = {}\n", fmt::ptr(info->vol));
 
     /* Open the file with the underlying VOL connector */
     under = info->vol->file_create(name, flags, fcpl_id, under_fapl_id, dxpl_id, req);
@@ -80,7 +88,7 @@ _file_open(const char *name, unsigned flags, hid_t fapl_id, hid_t dxpl_id, void 
     void *under;
 
 #ifdef LOWFIVE_ENABLE_PASSTHRU_LOGGING
-    printf("------- PASS THROUGH VOL FILE Open\n");
+    fprintf(stderr, "------- PASS THROUGH VOL FILE Open\n");
 #endif
 
     /* Get copy of our VOL info from FAPL */
@@ -139,7 +147,7 @@ _file_get(void *file, H5VL_file_get_t get_type, hid_t dxpl_id,
     herr_t ret_value;
 
 #ifdef LOWFIVE_ENABLE_PASSTHRU_LOGGING 
-    printf("------- PASS THROUGH VOL FILE Get\n");
+    fprintf(stderr, "------- PASS THROUGH VOL FILE Get\n");
 #endif
 
     ret_value = o->vol->file_get(o->under_object, get_type, dxpl_id, req, arguments);
@@ -156,7 +164,152 @@ LowFive::VOLBase::
 file_get(void *file, H5VL_file_get_t get_type, hid_t dxpl_id,
     void **req, va_list arguments)
 {
-    return H5VLfile_get(file, info.under_vol_id, get_type, dxpl_id, req, arguments);
+    return H5VLfile_get(file, info->under_vol_id, get_type, dxpl_id, req, arguments);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:    pass_through_file_specific_reissue
+ *
+ * Purpose:     Re-wrap vararg arguments into a va_list and reissue the
+ *              file specific callback to the underlying VOL connector.
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+LowFive::VOLBase::
+_file_specific_reissue(void *obj, hid_t connector_id,
+    H5VL_file_specific_t specific_type, hid_t dxpl_id, void **req, ...)
+{
+    // TODO: is this right? making a new object from the reissued one?
+    pass_through_t *o = (pass_through_t *)obj;
+
+    va_list arguments;
+    herr_t ret_value;
+
+    va_start(arguments, req);
+    // TODO: is this right? making a new object from the reissued one?
+    ret_value = o->vol->file_specific(o->under_object, specific_type, dxpl_id, req, arguments);
+    va_end(arguments);
+
+    return ret_value;
+} /* end _file_specific_reissue() */
+
+/*-------------------------------------------------------------------------
+ * Function:    _file_specific
+ *
+ * Purpose:     Specific operation on file
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+LowFive::VOLBase::
+_file_specific(void *file, H5VL_file_specific_t specific_type,
+    hid_t dxpl_id, void **req, va_list arguments)
+{
+    pass_through_t *o = (pass_through_t *)file;
+    hid_t under_vol_id = -1;
+    herr_t ret_value;
+
+#ifdef LOWFIVE_ENABLE_PASSTHRU_LOGGING
+    fprintf(stderr, "------- PASS THROUGH VOL FILE Specific\n");
+#endif
+
+    /* Unpack arguments to get at the child file pointer when mounting a file */
+    if(specific_type == H5VL_FILE_MOUNT) {
+        H5I_type_t loc_type;
+        const char *name;
+        pass_through_t *child_file;
+        hid_t plist_id;
+
+        /* Retrieve parameters for 'mount' operation, so we can unwrap the child file */
+        loc_type = (H5I_type_t)va_arg(arguments, int); /* enum work-around */
+        name = va_arg(arguments, const char *);
+        child_file = (pass_through_t *)va_arg(arguments, void *);
+        plist_id = va_arg(arguments, hid_t);
+
+        /* Keep the correct underlying VOL ID for possible async request token */
+        under_vol_id = o->under_vol_id;
+
+        /* Re-issue 'file specific' call, using the unwrapped pieces */
+        ret_value = _file_specific_reissue(o->under_object, o->under_vol_id, specific_type, dxpl_id, req, (int)loc_type, name, child_file->under_object, plist_id);
+    } /* end if */
+    else if(specific_type == H5VL_FILE_IS_ACCESSIBLE || specific_type == H5VL_FILE_DELETE) {
+        info_t *info;
+        hid_t fapl_id, under_fapl_id;
+        const char *name;
+        htri_t *ret;
+
+        /* Get the arguments for the 'is accessible' check */
+        fapl_id = va_arg(arguments, hid_t);
+        name    = va_arg(arguments, const char *);
+        ret     = va_arg(arguments, htri_t *);
+
+        /* Get copy of our VOL info from FAPL */
+        H5Pget_vol_info(fapl_id, (void **)&info);
+
+        /* Copy the FAPL */
+        under_fapl_id = H5Pcopy(fapl_id);
+
+        /* Set the VOL ID and info for the underlying FAPL */
+        H5Pset_vol(under_fapl_id, info->under_vol_id, info->under_vol_info);
+
+        /* Keep the correct underlying VOL ID for possible async request token */
+        under_vol_id = info->under_vol_id;
+
+        /* Re-issue 'file specific' call */
+        ret_value = _file_specific_reissue(NULL, info->under_vol_id, specific_type, dxpl_id, req, under_fapl_id, name, ret);
+
+        /* Close underlying FAPL */
+        H5Pclose(under_fapl_id);
+
+        /* Release copy of our VOL info */
+        _info_free(info);
+    } /* end else-if */
+    else {
+        va_list my_arguments;
+
+        /* Make a copy of the argument list for later, if reopening */
+        if(specific_type == H5VL_FILE_REOPEN)
+            va_copy(my_arguments, arguments);
+
+        /* Keep the correct underlying VOL ID for possible async request token */
+        under_vol_id = o->under_vol_id;
+
+        ret_value = o->vol->file_specific(o->under_object, specific_type, dxpl_id, req, arguments);
+
+        /* Wrap file struct pointer, if we reopened one */
+        if(specific_type == H5VL_FILE_REOPEN) {
+            if(ret_value >= 0) {
+                void      **ret = va_arg(my_arguments, void **);
+
+                if(ret && *ret)
+                    *ret = o->create(*ret);
+            } /* end if */
+
+            /* Finish use of copied vararg list */
+            va_end(my_arguments);
+        } /* end if */
+    } /* end else */
+
+    /* Check for async request */
+    if(req && *req)
+        *req = o->create(*req);
+
+    return ret_value;
+} /* end _file_specific() */
+
+herr_t
+LowFive::VOLBase::
+file_specific(void *file, H5VL_file_specific_t specific_type,
+    hid_t dxpl_id, void **req, va_list arguments)
+{
+    return H5VLfile_specific(file, info->under_vol_id, specific_type, dxpl_id, req, arguments);
 }
 
 /*-------------------------------------------------------------------------
@@ -177,8 +330,8 @@ _file_optional(void *file, H5VL_file_optional_t opt_type,
     pass_through_t *o = (pass_through_t *)file;
     herr_t ret_value;
 
-#ifdef LOWFIVE_ENABLE_PASSTHRU_LOGGING 
-    printf("------- PASS THROUGH VOL File Optional\n");
+#ifdef LOWFIVE_ENABLE_PASSTHRU_LOGGING
+    fprintf(stderr, "------- PASS THROUGH VOL File Optional\n");
 #endif
 
     ret_value = o->vol->file_optional(o->under_object, opt_type, dxpl_id, req, arguments);
@@ -195,7 +348,7 @@ LowFive::VOLBase::
 file_optional(void *file, H5VL_file_optional_t opt_type,
     hid_t dxpl_id, void **req, va_list arguments)
 {
-    return H5VLfile_optional(file, info.under_vol_id, opt_type, dxpl_id, req, arguments);
+    return H5VLfile_optional(file, info->under_vol_id, opt_type, dxpl_id, req, arguments);
 }
 
 /*-------------------------------------------------------------------------
@@ -216,7 +369,7 @@ _file_close(void *file, hid_t dxpl_id, void **req)
     herr_t ret_value;
 
 #ifdef LOWFIVE_ENABLE_PASSTHRU_LOGGING
-    printf("------- PASS THROUGH VOL FILE Close\n");
+    fprintf(stderr, "------- PASS THROUGH VOL FILE Close\n");
 #endif
 
     ret_value = o->vol->file_close(o->under_object, dxpl_id, req);
@@ -236,5 +389,5 @@ herr_t
 LowFive::VOLBase::
 file_close(void *file, hid_t dxpl_id, void **req)
 {
-    return H5VLfile_close(file, info.under_vol_id, dxpl_id, req);
+    return H5VLfile_close(file, info->under_vol_id, dxpl_id, req);
 }

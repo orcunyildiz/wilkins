@@ -187,14 +187,11 @@ struct container_converter {
 };
 
 
-// apply conversion for vectors 1D
+// apply conversion for continuous vectors
 template <typename T>
 struct data_converter<
     std::vector<T>,
-    typename std::enable_if<(
-        std::is_same<T, typename inspector<T>::base_type>::value &&
-        !std::is_same<T, Reference>::value
-        )>::type>
+    typename std::enable_if<std::is_trivially_copyable<T>::value>::type>
     : public container_converter<std::vector<T>> {
 
     using container_converter<std::vector<T>>::container_converter;
@@ -409,7 +406,7 @@ struct data_converter<std::vector<Reference>, void> {
     }
 
     inline const hobj_ref_t* transform_write(const std::vector<Reference>& vec) {
-        _vec_align.reserve(compute_total_size(_dims));
+        _vec_align.resize(compute_total_size(_dims));
         for (size_t i = 0; i < vec.size(); ++i) {
             vec[i].create_ref(&_vec_align[i]);
         }

@@ -106,13 +106,17 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
             WorkflowNode node;
             node.out_links.clear();
             node.in_links.clear();
-            node.inports.clear();
-            node.outports.clear();
+            //node.inports.clear();
+            //node.outports.clear();
+            node.l5_inports.clear();
+            node.l5_outports.clear();
 
      	    node.start_proc = nodes[i]["start_proc"].as<int>();
             node.nprocs = nodes[i]["nprocs"].as<int>();
             node.func =  nodes[i]["func"].as<std::string>();
 
+            //orc@08-12: moving passthru/metadata flags back to edges (i.e., dataset level)
+/*
             //lowfive related flags
             if(nodes[i]["passthru"])
                 node.passthru = nodes[i]["passthru"].as<int>();
@@ -129,7 +133,7 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
                 fprintf(stderr, "Error: Either metadata or passthru must be enabled. Both cannot be disabled.\n");
                 exit(1);
             }
-
+*/
             if(nodes[i]["inports"])
             {
                 const YAML::Node& inports = nodes[i]["inports"];
@@ -142,15 +146,36 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
                     for (std::size_t k=0;k<dsets.size();k++)
                     {
                             string full_path = filename + "/" + dsets[k]["name"].as<std::string>();
-                            node.inports.push_back(full_path);
+                            //node.inports.push_back(full_path);
+
+                            //default values: p->0, m->1
+                            int passthru  = 0;
+                            int metadata  = 1;
+
+                            if(dsets[k]["passthru"])
+                                passthru = dsets[k]["passthru"].as<int>();
+                            if(dsets[k]["metadata"])
+                                metadata = dsets[k]["metadata"].as<int>();
+
+                            if (!(metadata + passthru))
+                            {
+             	                fprintf(stderr, "Error: Either metadata or passthru must be enabled. Both cannot be disabled.\n");
+                                exit(1);
+                            }
+
+                            LowFivePort l5_port;
+                            l5_port.name      = full_path;
+                            l5_port.passthru  = passthru;
+                            l5_port.metadata  = metadata;
+                            node.l5_inports.push_back(l5_port);
+
                             //for each filename+dset pair, we create a link
                             WorkflowLink link;
                             link.prod = -1; //-1 indicates prod is undefined during the creation
                             link.con = workflow.nodes.size();
                             link.name = full_path + ":" + node.func;
-                            //TODO move these to nodes rather than edges:
-                            link.in_passthru = node.passthru;
-                            link.in_metadata = node.metadata;
+                            link.in_passthru = passthru;
+                            link.in_metadata = metadata;
 
                             link.ownership = 0;
                             //TODO think on how we handle the cycles
@@ -171,14 +196,37 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
                     string filename = outports[j]["filename"].as<std::string>();
 
                     const YAML::Node& dsets = outports[j]["dsets"];
+
                     for (std::size_t k=0;k<dsets.size();k++)
                     {
+                        LowFivePort l5_port;
 
+                        //default values: o->0, p->0, m->1
                         int ownership = 0;
+                        int passthru  = 0;
+                        int metadata  = 1;
+
                         string full_path = filename + "/" + dsets[k]["name"].as<std::string>();
-                        node.outports.push_back(full_path); //TODO: add the ownership info later
+                        //node.outports.push_back(full_path); //deprecated, TODO: omit this once L5 design is finalized
+
                         if(dsets[k]["ownership"])
                             ownership = dsets[k]["ownership"].as<int>();
+                        if(dsets[k]["passthru"])
+                            passthru = dsets[k]["passthru"].as<int>();
+                        if(dsets[k]["metadata"])
+                            metadata = dsets[k]["metadata"].as<int>();
+
+                        if (!(metadata + passthru))
+                        {
+             	            fprintf(stderr, "Error: Either metadata or passthru must be enabled. Both cannot be disabled.\n");
+                            exit(1);
+                        }
+
+			l5_port.name      = full_path;
+                        l5_port.ownership = ownership;
+                        l5_port.passthru  = passthru;
+                        l5_port.metadata  = metadata;
+                        node.l5_outports.push_back(l5_port);
 
                     }
                 }
@@ -188,7 +236,7 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
 
          }// End for workflow.nodes
 
-        // linking the nodes
+       // linking the nodes
         for ( size_t i = 0; i< workflow.links.size(); i++)
         {
             string inPort;
@@ -198,13 +246,30 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
             for (size_t j = 0; j < workflow.nodes.size(); j++)
             {
                 //simply find the prod then connect it
-                for (string outPort : workflow.nodes[j].outports)
+                //for (string outPort : workflow.nodes[j].outports)
+                for (LowFivePort outPort : workflow.nodes[j].l5_outports) //orc@06-12: converting to l5_ports instead of ports.
                 {
-                    if(match(inPort.c_str(),outPort.c_str()))
+                    if(match(inPort.c_str(),outPort.name.c_str()))
                     {
                         workflow.links[i].prod = j;
-                        workflow.links[i].out_passthru = workflow.nodes[j].passthru;
-                        workflow.links[i].out_metadata = workflow.nodes[j].metadata;
+                        workflow.links[i].out_passthru = outPort.passthru;
+                        workflow.links[i].out_metadata = outPort.metadata;
+			//orc@08-12: handling conflicts btw prod/con pairs. Add more cases, if needed.
+                        if (workflow.links[i].in_passthru && !workflow.links[i].out_passthru)
+                        {
+                            fprintf(stderr, "Error: Passthru is not enabled at the producer side, switching to metadata for %s.\n", outPort.name.c_str());
+                            workflow.links[i].in_passthru = 0;
+                            workflow.links[i].in_metadata = 1;
+                        }
+
+                        if (workflow.links[i].in_metadata && !workflow.links[i].out_metadata)
+                        {
+                            fprintf(stderr, "Error: Metadata is not enabled at the producer side, switching to passthru for %s.\n", outPort.name.c_str());
+                            workflow.links[i].in_passthru = 1;
+                            workflow.links[i].in_metadata = 0;
+                        }
+
+                        workflow.links[i].ownership = outPort.ownership;
                         workflow.links[i].fullName = workflow.links[i].name + ":" + workflow.nodes[j].func; //orc@17-09: obtaining also prod name for the shared mode
                         workflow.nodes.at( j ).out_links.push_back(i);
                         workflow.nodes.at( workflow.links[i].con ).in_links.push_back(i);

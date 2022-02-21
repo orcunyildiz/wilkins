@@ -26,16 +26,17 @@ struct Dataset : public Object
     Dataspace                       space;
     DataTriples                     data;
     Ownership                       ownership;
+    Hid                             dcpl;                   // hdf5 id of dataset creation property list
 
-    Dataset(std::string name, hid_t dtype_id, hid_t space_id, Ownership own):
-        Object(ObjectType::Dataset, name), type(dtype_id), space(space_id), ownership(own)
+    Dataset(std::string name, hid_t dtype_id, hid_t space_id, Ownership own, Hid dcpl_):
+        Object(ObjectType::Dataset, name), type(dtype_id), space(space_id), ownership(own), dcpl(dcpl_)
     {}
 
     void write(Datatype type, Dataspace memory, Dataspace file, const void* buf)
     {
         if (ownership == Ownership::lowfive)
         {
-            size_t nbytes   = file.size() * type.dtype_size;
+            size_t nbytes   = (memory.id ? memory.size() : space.size()) * type.dtype_size;
             char* p         = new char[nbytes];
             std::memcpy(p, buf, nbytes);
             data.emplace_back(DataTriple { type, memory, file, p, std::unique_ptr<char[]>(p) });
@@ -44,23 +45,23 @@ struct Dataset : public Object
             data.emplace_back(DataTriple { type, memory, file, buf, std::unique_ptr<char[]>(nullptr) });
     }
 
-    void print() const override
+    void print(int depth) const override
     {
+        for (auto i = 0; i < depth; i++)
+            fmt::print(stderr, "    ");
         fmt::print(stderr, "---- Dataset ---\n");
-        Object::print();
+
+        for (auto i = 0; i < depth; i++)
+            fmt::print(stderr, "    ");
         fmt::print(stderr, "type = {}, space = {}, ownership = {}\n", type, space, ownership);
+
+        for (auto i = 0; i < depth; i++)
+            fmt::print(stderr, "    ");
         for (auto& d : data)
             fmt::print("memory = {}, file = {}, data = {}\n", d.memory, d.file, fmt::ptr(d.data));
+
+        Object::print(depth);
     }
-};
-
-struct RemoteDataset : public Object
-{
-    RemoteDataset(std::string name):
-        Object(ObjectType::Dataset, name, false)    // false: remote datasets don't strip path from their name
-    {}
-
-    void* query = nullptr;
 };
 
 }

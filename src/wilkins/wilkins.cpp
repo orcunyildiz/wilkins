@@ -158,11 +158,11 @@ Wilkins::init()
 
     // set up file access property list
     this->plist_ =  H5Pcreate(H5P_FILE_ACCESS);
-    if (passthru)
-        H5Pset_fapl_mpio(plist_, local, MPI_INFO_NULL);
+    //if (passthru) //orc@08-12: setting this regardless of passthru/metadata flags (better than setting multiple times per dataset w passthru)
+    H5Pset_fapl_mpio(plist_, local, MPI_INFO_NULL);
 
     // set up lowfive
-    l5::DistMetadataVOL vol_plugin(local, communicators, metadata, passthru);
+    l5::DistMetadataVOL vol_plugin(local, communicators);
     l5::H5VOLProperty vol_prop(vol_plugin);
     vol_prop.apply(plist_);
 
@@ -182,8 +182,16 @@ Wilkins::init()
 
             // set ownership of dataset (default is user (shallow copy), lowfive means deep copy)
             // filename and full path to dataset can contain '*' and '?' wild cards (ie, globs, not regexes)
-            if (df->ownership())
-                vol_plugin.data_ownership(filename, dset, l5::Dataset::Ownership::lowfive);
+            if (!df->ownership())
+                vol_plugin.set_zerocopy(filename, dset);
+
+            // set passthru/memory at dataset level TODO: for now using default values, obtain them thru YAML file like below (df->out_passthru()).
+            if (passthru)
+                vol_plugin.set_passthru(filename, dset);
+            if (metadata)
+                vol_plugin.set_memory(filename, dset);
+
+	    fmt::print("PRODUCER:passthru = {}, metadata = {}, ownership = {}, filename = {}, dset = {}\n", df->out_passthru(), df->out_metadata(), df->ownership(), filename, dset);
 
          }
     }
@@ -205,10 +213,18 @@ Wilkins::init()
             // set intercomms of dataset
             // filename and full path to dataset can contain '*' and '?' wild cards (ie, globs, not regexes)
             if (communicators.size()==1)
-                vol_plugin.data_intercomm(filename, dset, 0); //orc@05-11: In TP, need to increment/set index differently
+                vol_plugin.set_intercomm(filename, dset, 0); //orc@05-11: In TP, need to increment/set index differently
             else
-                vol_plugin.data_intercomm(filename, dset, index);
+                vol_plugin.set_intercomm(filename, dset, index);
             index++;
+
+            // set passthru/memory at dataset level TODO: for now using default values, obtain them thru YAML file  like below (pair.first->in_passthru()) (in addition to default values).
+            if (passthru)
+                vol_plugin.set_passthru(filename, dset);
+            if (metadata)
+                vol_plugin.set_memory(filename, dset);
+
+            fmt::print("CONSUMER: passthru = {}, metadata = {}, filename = {}, dset = {}\n", pair.first->in_passthru(), pair.first->in_metadata(), filename, dset);
 
             //orc@13-07: wait for data to be ready for the specific intercomm
             //orc@17-09: moving here since now we can have multiple intercomms for the same prod-con pair
@@ -457,7 +473,7 @@ Wilkins::build_lowfive()
         H5Pset_fapl_mpio(plist_, local, MPI_INFO_NULL);
 
     // set up lowfive
-    l5::DistMetadataVOL vol_plugin(local, communicators, metadata, passthru);
+    l5::DistMetadataVOL vol_plugin(local, communicators);
     l5::H5VOLProperty vol_prop(vol_plugin);
     vol_prop.apply(plist_);
 
@@ -477,8 +493,8 @@ Wilkins::build_lowfive()
 
             // set ownership of dataset (default is user (shallow copy), lowfive means deep copy)
             // filename and full path to dataset can contain '*' and '?' wild cards (ie, globs, not regexes)
-            if (df->ownership())
-                vol_plugin.data_ownership(filename, dset, l5::Dataset::Ownership::lowfive);
+            if (!df->ownership())
+                vol_plugin.set_zerocopy(filename, dset);
 
          }
     }
@@ -499,8 +515,8 @@ Wilkins::build_lowfive()
 
             // set intercomms of dataset
             // filename and full path to dataset can contain '*' and '?' wild cards (ie, globs, not regexes)
-            //vol_plugin.data_intercomm(filename, dset, pair.second);
-            vol_plugin.data_intercomm(filename, dset, index);
+            //vol_plugin.set_intercomm(filename, dset, pair.second);
+            vol_plugin.set_intercomm(filename, dset, index);
             index++;
 
             //orc@13-07: wait for data to be ready for the specific intercomm

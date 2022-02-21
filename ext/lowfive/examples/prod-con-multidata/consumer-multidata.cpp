@@ -28,27 +28,48 @@ void consumer_f (communicator& local, const std::vector<communicator>& intercomm
         fmt::print("consumer: shared {} local size {} intercomms size {} intercomm1 size {}\n",
                 shared, local.size(), intercomms.size(), intercomms[0].size());
 
+    // set up lowfive
+    l5::DistMetadataVOL vol_plugin(local, intercomms);
+
     // set up file access property list
     hid_t plist = H5Pcreate(H5P_FILE_ACCESS);
     if (passthru)
         H5Pset_fapl_mpio(plist, local, MPI_INFO_NULL);
 
-    // set up lowfive
-    l5::DistMetadataVOL vol_plugin(local, intercomms, metadata, passthru);
     l5::H5VOLProperty vol_prop(vol_plugin);
-    vol_prop.apply(plist);
+    if (!getenv("HDF5_VOL_CONNECTOR"))
+    {
+        fmt::print("HDF5_VOL_CONNECTOR is not set; enabling VOL explicitly\n");
+        vol_prop.apply(plist);
+    } else
+    {
+        fmt::print("HDF5_VOL_CONNECTOR is set; not enabling VOL explicitly\n");
+    }
+
+    if (passthru)
+    {
+        vol_plugin.set_passthru("outfile.h5", "*");
+        vol_plugin.set_passthru("outfile1.h5", "*");
+        vol_plugin.set_passthru("outfile2.h5", "*");
+    }
+    if (metadata)
+    {
+        vol_plugin.set_memory("outfile.h5", "*");
+        vol_plugin.set_memory("outfile1.h5", "*");
+        vol_plugin.set_memory("outfile2.h5", "*");
+    }
 
     // set intercomms of dataset
     // filename and full path to dataset can contain '*' and '?' wild cards (ie, globs, not regexes)
     if (intercomms.size() == 1)                 // one producer, one file
     {
-        vol_plugin.data_intercomm("outfile.h5", "/group1/grid", 0);
-        vol_plugin.data_intercomm("outfile.h5", "/group1/particles", 0);
+        vol_plugin.set_intercomm("outfile.h5", "/group1/grid", 0);
+        vol_plugin.set_intercomm("outfile.h5", "/group1/particles", 0);
     }
     else                                        // two producers, two files
     {
-        vol_plugin.data_intercomm("outfile1.h5", "/group1/grid", 0);
-        vol_plugin.data_intercomm("outfile2.h5", "/group1/particles", 1);
+        vol_plugin.set_intercomm("outfile1.h5", "/group1/grid", 0);
+        vol_plugin.set_intercomm("outfile2.h5", "/group1/particles", 1);
     }
 
     // wait for data to be ready

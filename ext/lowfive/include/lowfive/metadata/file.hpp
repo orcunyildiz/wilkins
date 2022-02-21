@@ -6,20 +6,22 @@ namespace LowFive
 // (root of) the tree of metadata for one HDF5 "file"
 struct File: public Object
 {
-    File(std::string filename_):
-        Object(ObjectType::File, filename_)
+    Hid             fcpl;                   // hdf5 id of file creation property list
+    Hid             fapl;                   // hdf5 id of file access property list
+
+    File(std::string filename_, Hid fcpl_, Hid fapl_):
+        Object(ObjectType::File, filename_), fcpl(fcpl_), fapl(fapl_)
     {
         // debug
         fmt::print(stderr, "Creating metadata for {}\n", filename_);
     }
 
-    // TODO: add find(name), add(name, object)
-
     // preorder depth-first traversal
     void print() const
     {
-        fmt::print(stderr, "Printing metadata tree for {}\n", name);
-        Object::print();
+        fmt::print(stderr, "\nPrinting metadata tree for {}\n", name);
+        Object::print(0);
+        fmt::print(stderr, "\n");
     }
 };
 

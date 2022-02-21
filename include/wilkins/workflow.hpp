@@ -26,6 +26,13 @@
 #include <string>
 
 using namespace std;
+struct LowFivePort
+{
+    string name;
+    int ownership;
+    int passthru;
+    int metadata;
+};
 
 struct WorkflowNode                          /// a producer or consumer
 {
@@ -43,15 +50,16 @@ struct WorkflowNode                          /// a producer or consumer
     int nprocs;                 ///< number of processes for this node (producer or consumer)
     string func;                ///< name of node callback
     void* args;                 ///< callback arguments
-    vector<string> inports;     ///< input ports, if available
-    vector<string> outports;    ///< output ports, if available
-    int passthru;                   ///< "lowfive: write file to disk"
-    int metadata;                   ///< "lowfive: build and use in-memory metadata"
+    //vector<string> inports;     ///< input ports, if available //orc@08-12: deprecated, using l5_inports instead
+    //vector<string> outports;    ///< output ports, if available //orc@08-12: deprecated, using l5_outports instead
+    vector<LowFivePort> l5_inports;     ///< input ports, if available
+    vector<LowFivePort> l5_outports;    ///< output ports, if available
+    //int passthru;                   ///< "lowfive: write file to disk" //orc@08-12: deprecated as LowFive properties are moved to dset level
+    //int metadata;                   ///< "lowfive: build and use in-memory metadata" //orc@08-12: deprecated as LowFive properties are moved to dset level
     void add_out_link(int link);
     void add_in_link(int link);
 };
 
-//orc@17-08: TODO clean further at the wilkins.py as well
 struct WorkflowLink                          /// a dataflow
 {
     WorkflowLink()                                {}
