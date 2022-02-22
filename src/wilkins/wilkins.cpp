@@ -152,10 +152,6 @@ Wilkins::init()
         local = wilkins_get_local_comm();
     }
 
-    //orc@21-02: default values for passthru/metadata
-    int passthru = 0;
-    int metadata = 1;
-
     // set up file access property list
     this->plist_ =  H5Pcreate(H5P_FILE_ACCESS);
     //if (passthru) //orc@08-12: setting this regardless of passthru/metadata flags (better than setting multiple times per dataset w passthru)
@@ -242,6 +238,52 @@ Wilkins::init()
     return vol_plugin;
 
 }
+
+
+void
+wilkins::
+Wilkins::initStandalone()
+{
+
+    std::string dflowName, full_path, filename, dset;
+    std::vector<diy::mpi::communicator> communicators;
+
+    diy::mpi::communicator local;
+
+    //orc@26-10: if not wilkins_master, MPMD mode, creating comms ourselves
+    if (!wilkins_master())
+    {
+        communicators = this->build_intercomms();
+        local = this->local_comm_handle();
+    }
+    else
+    {
+     	communicators = wilkins_get_intercomms();
+        local = wilkins_get_local_comm();
+    }
+
+    //I'm a consumer
+    //orc@21-02: this is required for handshake assuming producer would finish with commit().
+    if (!node_in_dataflows.empty())
+    {
+        int index = 0;
+        for (std::pair<Dataflow*, int> pair : node_in_dataflows)
+        {
+
+            index++;
+
+            //orc@13-07: wait for data to be ready for the specific intercomm
+            //orc@17-09: moving here since now we can have multiple intercomms for the same prod-con pair
+            //placing this after intercomm creation would result in a deadlock therefore
+            if (pair.first->in_passthru() && !pair.first->in_metadata())
+                communicators[index-1].barrier();
+
+        }
+
+    }
+
+}
+
 
 std::vector<int>
 wilkins::

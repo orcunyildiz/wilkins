@@ -6,7 +6,11 @@ nodes:
       - filename: outfile.h5
         dsets:
           - name: /group1/grid
+            passthru: 1
+            metadata: 0
           - name: /group1/particles
+            passthru: 1
+            metadata: 0
   - func: consumer
     start_proc: 3
     nprocs: 1
@@ -14,4 +18,8 @@ nodes:
       - filename: outfile.h5
         dsets:
           - name: /group1/grid
+            passthru: 1
+            metadata: 0
           - name: /group1/particles
+            passthru: 1
+            metadata: 0
