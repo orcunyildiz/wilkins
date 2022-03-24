@@ -16,6 +16,8 @@ using communicator = diy::mpi::communicator;
 #include <wilkins/wilkins.hpp>
 #include <wilkins/context.h>
 
+#include <string>
+
 using namespace wilkins;
 
 // --- ranks of producer task ---
@@ -23,11 +25,10 @@ void producer_f (Wilkins* wilkins,
                  std::string prefix,
                  int threads, int mem_blocks,
                  Bounds domain,
-                 int global_nblocks, int dim, size_t local_num_points)
-
+                 int global_nblocks, int dim, size_t local_num_points, std::vector<int>& index_vec)
 {
 
-    fmt::print("Entered producer\n");
+    fmt::print("Entered producer {}\n", index_vec[0]);
 
     communicator local = wilkins->local_comm_handle();
 
@@ -35,10 +36,12 @@ void producer_f (Wilkins* wilkins,
     hid_t plist = wilkins->plist();
 
     // --- producer ranks running user task code  ---
-
-    // diy setup for the producer
-    diy::FileStorage                prod_storage(prefix);
-    diy::Master                     prod_master(local,
+    //orc@23-03: in case of fan-out, producer behaves like orchestrator
+    for (auto index : index_vec)
+    {
+        // diy setup for the producer
+        diy::FileStorage                prod_storage(prefix);
+        diy::Master                     prod_master(local,
             threads,
             mem_blocks,
             &Block::create,
@@ -46,50 +49,58 @@ void producer_f (Wilkins* wilkins,
             &prod_storage,
             &Block::save,
             &Block::load);
-    size_t global_num_points = local_num_points * global_nblocks;
-    AddBlock                        prod_create(prod_master, local_num_points, global_num_points, global_nblocks);
-    diy::ContiguousAssigner         prod_assigner(local.size(), global_nblocks);
-    diy::RegularDecomposer<Bounds>  prod_decomposer(dim, domain, global_nblocks);
-    prod_decomposer.decompose(local.rank(), prod_assigner, prod_create);
+        size_t global_num_points = local_num_points * global_nblocks;
+        AddBlock                        prod_create(prod_master, local_num_points, global_num_points, global_nblocks);
+        diy::ContiguousAssigner         prod_assigner(local.size(), global_nblocks);
+        diy::RegularDecomposer<Bounds>  prod_decomposer(dim, domain, global_nblocks);
+        prod_decomposer.decompose(local.rank(), prod_assigner, prod_create);
 
-    // create a new file and group using default properties
-    hid_t file = H5Fcreate("outfile.h5", H5F_ACC_TRUNC, H5P_DEFAULT, plist);
-    hid_t group = H5Gcreate(file, "/group1", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        // create a new file and group using default properties
+        //orc@21-03: testing subgraph API
+        //currently, index is obtained as args. alternatives:
+            //i) wilkins provides filenames to user for its H5 funcs
+            //ii) wilkins traps H5 calls to modify filename corresponding to these filenames w subgraph
 
-    std::vector<hsize_t> domain_cnts(DIM);
-    for (auto i = 0; i < DIM; i++)
-        domain_cnts[i]  = domain.max[i] - domain.min[i] + 1;
+        string filename = "outfile_" +  to_string(index) + ".h5";
+        hid_t file = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, plist);
+        //hid_t file = H5Fcreate("outfile.h5", H5F_ACC_TRUNC, H5P_DEFAULT, plist);
+        hid_t group = H5Gcreate(file, "/group1", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
-    // create the file data space for the global grid
-    hid_t filespace = H5Screate_simple(DIM, &domain_cnts[0], NULL);
+        std::vector<hsize_t> domain_cnts(DIM);
+        for (auto i = 0; i < DIM; i++)
+            domain_cnts[i]  = domain.max[i] - domain.min[i] + 1;
 
-    // create the grid dataset with default properties
-    hid_t dset = H5Dcreate2(group, "grid", H5T_IEEE_F32LE, filespace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    // write the grid data
-    prod_master.foreach([&](Block* b, const diy::Master::ProxyWithLink& cp)
+        // create the file data space for the global grid
+        hid_t filespace = H5Screate_simple(DIM, &domain_cnts[0], NULL);
+
+        // create the grid dataset with default properties
+        hid_t dset = H5Dcreate2(group, "grid", H5T_IEEE_F32LE, filespace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        // write the grid data
+        prod_master.foreach([&](Block* b, const diy::Master::ProxyWithLink& cp)
             { b->write_block_grid(cp, dset); });
 
-    // clean up
-    H5Dclose(dset);
-    H5Sclose(filespace);
+        // clean up
+        H5Dclose(dset);
+        H5Sclose(filespace);
 
-    // create the file data space for the particles
-    domain_cnts[0]  = global_num_points;
-    domain_cnts[1]  = DIM;
-    filespace = H5Screate_simple(2, &domain_cnts[0], NULL);
+        // create the file data space for the particles
+        domain_cnts[0]  = global_num_points;
+        domain_cnts[1]  = DIM;
+        filespace = H5Screate_simple(2, &domain_cnts[0], NULL);
 
-    // create the particle dataset with default properties
-    dset = H5Dcreate2(group, "particles", H5T_IEEE_F32LE, filespace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        // create the particle dataset with default properties
+        dset = H5Dcreate2(group, "particles", H5T_IEEE_F32LE, filespace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
-    // write the particle data
-    prod_master.foreach([&](Block* b, const diy::Master::ProxyWithLink& cp)
+        // write the particle data
+        prod_master.foreach([&](Block* b, const diy::Master::ProxyWithLink& cp)
             { b->write_block_points(cp, dset, global_nblocks); });
 
-    // clean up
-    H5Dclose(dset);
-    H5Sclose(filespace);
-    H5Gclose(group);
-    H5Fclose(file);
+        // clean up
+        H5Dclose(dset);
+        H5Sclose(filespace);
+        H5Gclose(group);
+        H5Fclose(file);
+    }
     H5Pclose(plist);
 
     // signal the consumer that data are ready
@@ -110,12 +121,19 @@ int main(int argc, char* argv[])
     diy::mpi::communicator    world;
 
     // create wilkins
-    std::string config_file = argv[1];
+    //std::string config_file = argv[1]; //orc@24-03: w subgraph, this creates a really long MPMD run script, hence, omitting it.
+    std::string config_file = "wilkins_prod_con.yaml";
     Wilkins* wilkins = new Wilkins(MPI_COMM_WORLD, config_file);
+
+    std::vector<int> index_vec;
+    for (int i=1; i<argc; i++)
+        index_vec.push_back(atoi(argv[i])); //TODO: we can give these index vec via wilkins as well
 
     fmt::print("Halo from Wilkins with configuration for {}\n", config_file.c_str());
 
     int                       global_nblocks    = world.size();   // global number of blocks
+    //int                       global_nblocks    = 3; //orc@24-03: enable this when you want to test subgraph API w diff number of ensemble instances
+
     int                       mem_blocks        = -1;             // all blocks in memory
     int                       threads           = 1;              // no multithreading
     std::string               prefix            = "./DIY.XXXXXX"; // for saving block files out of core
@@ -164,7 +182,7 @@ int main(int argc, char* argv[])
 
     size_t global_npoints = global_nblocks * local_npoints;         // all block have same number of points
 
-    producer_f(wilkins, prefix, threads, mem_blocks, domain, global_nblocks, dim, local_npoints);
+    producer_f(wilkins, prefix, threads, mem_blocks, domain, global_nblocks, dim, local_npoints, index_vec);
 
     if(!wilkins_master())
         MPI_Finalize();

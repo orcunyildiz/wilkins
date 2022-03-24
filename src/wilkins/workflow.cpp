@@ -1,5 +1,5 @@
 #include <wilkins/workflow.hpp>
-
+#include <string.h>
 void
 WorkflowNode::add_out_link(int link)
 {
@@ -100,53 +100,62 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
         /*
         * iterate over the list of nodes, creating and populating WorkflowNodes as we go
         */
+
+        int startProc = 0; //orc@10-03: eliminating start proc
+
         for (std::size_t i=0;i<nodes.size();i++)
         {
 
-            WorkflowNode node;
-            node.out_links.clear();
-            node.in_links.clear();
-            //node.inports.clear();
-            //node.outports.clear();
-            node.l5_inports.clear();
-            node.l5_outports.clear();
+            //orc@08-03: adding the subgraph API
+            int index = 0;
 
-     	    node.start_proc = nodes[i]["start_proc"].as<int>();
-            node.nprocs = nodes[i]["nprocs"].as<int>();
-            node.func =  nodes[i]["func"].as<std::string>();
+            int nodeCount = 1;
+            if(nodes[i]["nodeCount"])
+                nodeCount = nodes[i]["nodeCount"].as<int>();
 
-            //orc@08-12: moving passthru/metadata flags back to edges (i.e., dataset level)
-/*
-            //lowfive related flags
-            if(nodes[i]["passthru"])
-                node.passthru = nodes[i]["passthru"].as<int>();
-            else
-                node.passthru = 0;
-
-            if(nodes[i]["metadata"])
-                node.metadata = nodes[i]["metadata"].as<int>();
-            else
-                node.metadata = 1;
-
-            if (!(node.metadata + node.passthru))
+            if (nodeCount < 1)
             {
-                fprintf(stderr, "Error: Either metadata or passthru must be enabled. Both cannot be disabled.\n");
+             	fprintf(stderr, "Error: node count cannot be smaller than 1\n");
                 exit(1);
             }
-*/
-            if(nodes[i]["inports"])
-            {
-                const YAML::Node& inports = nodes[i]["inports"];
-                for (std::size_t j=0;j<inports.size();j++)
-                {
 
-                    string filename = inports[j]["filename"].as<std::string>();
-                    //orc@09-01: not sure whether dsets is optional or not
-                    const YAML::Node& dsets = inports[j]["dsets"];
-                    for (std::size_t k=0;k<dsets.size();k++)
+            for(std::size_t m=0; m<nodeCount; m++)
+            {
+                WorkflowNode node;
+                node.out_links.clear();
+                node.in_links.clear();
+                node.l5_inports.clear();
+                node.l5_outports.clear();
+
+                node.nprocs = nodes[i]["nprocs"].as<int>();
+                node.func =  nodes[i]["func"].as<std::string>();
+                if (nodeCount > 1) node.func +=  "_" + to_string(index);
+                //node.start_proc = nodes[i]["start_proc"].as<int>(); //orc@10-03: omitting start_proc, and calculating it ourselves instead
+                node.start_proc = startProc;
+                startProc += node.nprocs;
+
+                if(nodes[i]["inports"])
+                {
+                    const YAML::Node& inports = nodes[i]["inports"];
+                    for (std::size_t j=0;j<inports.size();j++)
                     {
+
+                        string filename = inports[j]["filename"].as<std::string>();
+                        //orc@24-03: this is to generate matching data reqs (dataflows) w subgraph API
+                        //also using same filename convention on the user L5 code (since wilkins::init fetches the filename/dset from Workflow)
+                        //alternatives: i) wilkins provides filenames to user for its H5 funcs ii) wilkins traps H5 calls to modify filename corresponding to these filenames w subgraph
+                        if (nodeCount > 1)
+                        {
+                            string delim = ".";
+                            string preDlm = filename.substr(0, filename.find(delim));
+                            string postDlm = filename.substr(filename.find(delim), string::npos);
+                            filename = preDlm + "_" + to_string(index) + postDlm;
+                        }
+                        //orc@09-01: not sure whether dsets is optional or not
+                        const YAML::Node& dsets = inports[j]["dsets"];
+                        for (std::size_t k=0;k<dsets.size();k++)
+                        {
                             string full_path = filename + "/" + dsets[k]["name"].as<std::string>();
-                            //node.inports.push_back(full_path);
 
                             //default values: p->0, m->1
                             int passthru  = 0;
@@ -183,88 +192,119 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
 
                             workflow.links.push_back( link );
 
+                        }
                     }
                 }
-            }
 
 
-            if(nodes[i]["outports"])
-            {
-                const YAML::Node& outports = nodes[i]["outports"];
-                for (std::size_t j=0;j<outports.size();j++)
+                if(nodes[i]["outports"])
                 {
-                    string filename = outports[j]["filename"].as<std::string>();
-
-                    const YAML::Node& dsets = outports[j]["dsets"];
-
-                    for (std::size_t k=0;k<dsets.size();k++)
+                    const YAML::Node& outports = nodes[i]["outports"];
+                    for (std::size_t j=0;j<outports.size();j++)
                     {
-                        LowFivePort l5_port;
-
-                        //default values: o->0, p->0, m->1
-                        int ownership = 0;
-                        int passthru  = 0;
-                        int metadata  = 1;
-
-                        string full_path = filename + "/" + dsets[k]["name"].as<std::string>();
-                        //node.outports.push_back(full_path); //deprecated, TODO: omit this once L5 design is finalized
-
-                        if(dsets[k]["ownership"])
-                            ownership = dsets[k]["ownership"].as<int>();
-                        if(dsets[k]["passthru"])
-                            passthru = dsets[k]["passthru"].as<int>();
-                        if(dsets[k]["metadata"])
-                            metadata = dsets[k]["metadata"].as<int>();
-
-                        if (!(metadata + passthru))
+                        string filename = outports[j]["filename"].as<std::string>();
+                        if (nodeCount > 1)
                         {
-             	            fprintf(stderr, "Error: Either metadata or passthru must be enabled. Both cannot be disabled.\n");
-                            exit(1);
+                            string delim = ".";
+                            string preDlm = filename.substr(0, filename.find(delim));
+                            string postDlm = filename.substr(filename.find(delim), string::npos);
+                            filename = preDlm + "_" + to_string(index) + postDlm;
                         }
 
-			l5_port.name      = full_path;
-                        l5_port.ownership = ownership;
-                        l5_port.passthru  = passthru;
-                        l5_port.metadata  = metadata;
-                        node.l5_outports.push_back(l5_port);
+                        const YAML::Node& dsets = outports[j]["dsets"];
 
+                        for (std::size_t k=0;k<dsets.size();k++)
+                        {
+                            LowFivePort l5_port;
+
+                            //default values: o->0, p->0, m->1
+                            int ownership = 0;
+                            int passthru  = 0;
+                            int metadata  = 1;
+
+                            string full_path = filename + "/" + dsets[k]["name"].as<std::string>(); //TODO: "/" could be redundant since this is specified in dset name already
+
+                            if(dsets[k]["ownership"])
+                                ownership = dsets[k]["ownership"].as<int>();
+                            if(dsets[k]["passthru"])
+                                passthru = dsets[k]["passthru"].as<int>();
+                            if(dsets[k]["metadata"])
+                                metadata = dsets[k]["metadata"].as<int>();
+
+                            if (!(metadata + passthru))
+                            {
+             	                fprintf(stderr, "Error: Either metadata or passthru must be enabled. Both cannot be disabled.\n");
+                                exit(1);
+                            }
+
+			    l5_port.name      = full_path;
+                            l5_port.ownership = ownership;
+                            l5_port.passthru  = passthru;
+                            l5_port.metadata  = metadata;
+                            node.l5_outports.push_back(l5_port);
+
+                        }
                     }
                 }
-            }
 
-            workflow.nodes.push_back( node );
-
+                workflow.nodes.push_back( node );
+                index++;
+             }// End for nodeCount
          }// End for workflow.nodes
 
-       // linking the nodes
-        for ( size_t i = 0; i< workflow.links.size(); i++)
+        // linking the nodes //orc@21-03: w subgraph API, adding more linking options for fan-in and fan-out
+        int size_links = workflow.links.size();
+        int idx_links = workflow.links.size();
+
+        for ( size_t i = 0; i< size_links; i++)
         {
             string inPort;
             stringstream line(workflow.links[i].name);
             std::getline(line, inPort, ':');
+            int fanin_cnt = 0; //orc@21-03: used in fan-in for populating links (count per link)
 
             for (size_t j = 0; j < workflow.nodes.size(); j++)
             {
                 //simply find the prod then connect it
-                //for (string outPort : workflow.nodes[j].outports)
                 for (LowFivePort outPort : workflow.nodes[j].l5_outports) //orc@06-12: converting to l5_ports instead of ports.
                 {
-                    if(match(inPort.c_str(),outPort.name.c_str()))
+
+                    string delim = ".";
+                    string postDlm_in = inPort.substr(inPort.find(delim), string::npos);
+                    string postDlm_out = outPort.name.substr(outPort.name.find(delim), string::npos);
+
+                    string idx = "_"; //TODO we can make this more wilkins specific even (e.g., "wilkins") since "_" could be used..
+                    string core_in;
+                    stringstream extendedInPort(inPort);
+                    std::getline(extendedInPort, core_in, '_');
+                    if (strcmp(inPort.c_str(),core_in.c_str()) != 0)
+                        core_in += postDlm_in; //orc: only extend this for fanin/fanout cases (once '_' found)
+
+                    string core_out;
+                    stringstream extendedOutPort(outPort.name);
+                    std::getline(extendedOutPort, core_out, '_');
+                    if (strcmp(outPort.name.c_str(),core_out.c_str()) != 0)
+                        core_out += postDlm_out; //orc: only extend this for fanin/fanout cases (once '_' found)
+
+                    //orc@21-03: for fan-out, we are also checking whether the core outPort name (unmodified one w/o the index) still matching to the prod fullpath
+                    //also making sure that we only do this for fan-out, and don't do for other cases like N-N (i.e., inPort.find(idx) != string::npos)
+                    if(match(inPort.c_str(),outPort.name.c_str()) || ( match(core_in.c_str(),outPort.name.c_str()) && outPort.name.find(idx) == string::npos) )
                     {
                         workflow.links[i].prod = j;
                         workflow.links[i].out_passthru = outPort.passthru;
                         workflow.links[i].out_metadata = outPort.metadata;
+
 			//orc@08-12: handling conflicts btw prod/con pairs. Add more cases, if needed.
                         if (workflow.links[i].in_passthru && !workflow.links[i].out_passthru)
                         {
-                            fprintf(stderr, "Error: Passthru is not enabled at the producer side, switching to metadata for %s.\n", outPort.name.c_str());
+                            fprintf(stderr, "Warning: Passthru is not enabled at the producer side, switching to metadata for %s.\n", outPort.name.c_str());
                             workflow.links[i].in_passthru = 0;
                             workflow.links[i].in_metadata = 1;
                         }
 
                         if (workflow.links[i].in_metadata && !workflow.links[i].out_metadata)
                         {
-                            fprintf(stderr, "Error: Metadata is not enabled at the producer side, switching to passthru for %s.\n", outPort.name.c_str());
+                            fprintf(stderr, "Warning: Metadata is not enabled at the producer side, switching to passthru for %s.\n", outPort.name.c_str());
                             workflow.links[i].in_passthru = 1;
                             workflow.links[i].in_metadata = 0;
                         }
@@ -273,6 +313,83 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
                         workflow.links[i].fullName = workflow.links[i].name + ":" + workflow.nodes[j].func; //orc@17-09: obtaining also prod name for the shared mode
                         workflow.nodes.at( j ).out_links.push_back(i);
                         workflow.nodes.at( workflow.links[i].con ).in_links.push_back(i);
+                        //fprintf(stderr, "Match for a link %s with con %d and prod %d for link %d\n", workflow.links[i].fullName.c_str(), workflow.links[i].con, j, i);
+                    }
+                    else if( match(core_out.c_str(), inPort.c_str()) && inPort.find(idx) == string::npos ) //orc@21-03: fan-in scenario
+                    {
+                     	fanin_cnt++;
+
+                        if (fanin_cnt == 1)
+                        {
+                            //orc: using the existing link for fan-in (we created a single link so far)
+                     	    string preDlm_link = workflow.links[i].name.substr(0, workflow.links[i].name.find(delim));
+                            string postDlm_link = workflow.links[i].name.substr(workflow.links[i].name.find(delim), string::npos);
+                            workflow.links[i].name = preDlm_link + "_" + to_string(fanin_cnt-1) + postDlm_link;
+
+                     	    workflow.links[i].prod = j;
+                            workflow.links[i].out_passthru = outPort.passthru;
+                            workflow.links[i].out_metadata = outPort.metadata;
+
+                            //orc@08-12: handling conflicts btw prod/con pairs. Add more cases, if needed.
+                            if (workflow.links[i].in_passthru && !workflow.links[i].out_passthru)
+                            {
+                                fprintf(stderr, "Warning: Passthru is not enabled at the producer side, switching to metadata for %s.\n", outPort.name.c_str());
+                                workflow.links[i].in_passthru = 0;
+                                workflow.links[i].in_metadata = 1;
+                            }
+
+                            if (workflow.links[i].in_metadata && !workflow.links[i].out_metadata)
+                            {
+                                fprintf(stderr, "Warning: Metadata is not enabled at the producer side, switching to passthru for %s.\n", outPort.name.c_str());
+                                workflow.links[i].in_passthru = 1;
+                                workflow.links[i].in_metadata = 0;
+                            }
+
+                            workflow.links[i].ownership = outPort.ownership;
+                            workflow.links[i].fullName = workflow.links[i].name + ":" + workflow.nodes[j].func;
+                            workflow.nodes.at( j ).out_links.push_back(i);
+                            workflow.nodes.at( workflow.links[i].con ).in_links.push_back(i);
+                            //fprintf(stderr, "Match for a link %s with con %d and prod %d for link %d\n", workflow.links[i].fullName.c_str(), workflow.links[i].con, j, i);
+                        }
+                        else
+                        {
+                            //adding new links for fan-in:
+                            WorkflowLink link;
+                            link.prod = j;
+                            link.out_passthru = outPort.passthru;
+                            link.out_metadata = outPort.metadata;
+                            link.ownership = outPort.ownership;
+                            link.tokens = 0;
+
+                            link.con = workflow.links[i].con;
+                            link.name = outPort.name + ":" + workflow.nodes.at( workflow.links[i].con ).func;
+                            link.fullName = link.name + ":" + workflow.nodes[j].func;
+                            link.in_passthru = workflow.links[i].in_passthru;
+                            link.in_metadata = workflow.links[i].in_metadata;
+
+                            //orc@08-12: handling conflicts btw prod/con pairs. Add more cases, if needed.
+                            if (link.in_passthru && !link.out_passthru)
+                            {
+                                fprintf(stderr, "Warning: Passthru is not enabled at the producer side, switching to metadata for %s.\n", outPort.name.c_str());
+                                link.in_passthru = 0;
+                                link.in_metadata = 1;
+                            }
+
+                            if (link.in_metadata && !link.out_metadata)
+                            {
+                                fprintf(stderr, "Warning: Metadata is not enabled at the producer side, switching to passthru for %s.\n", outPort.name.c_str());
+                                link.in_passthru = 1;
+                                link.in_metadata = 0;
+                            }
+
+                            workflow.nodes.at( j ).out_links.push_back(idx_links);
+                            workflow.nodes.at( workflow.links[i].con ).in_links.push_back(idx_links);
+
+                            workflow.links.push_back( link );
+                            //fprintf(stderr, "Match for a link %s (fullname %s) with con %d and prod %d for link %d\n", link.name.c_str() ,link.fullName.c_str(), link.con, j, idx_links);
+                            idx_links++;
+                        }
+
                     }
                 }
             }

@@ -1,0 +1,29 @@
+nodes:
+  - nodeCount: 2
+    func: producer
+    nprocs: 3
+    cmdline: ./producer_mpmd
+    outports:
+      - filename: outfile.h5
+        dsets:
+          - name: /group1/grid
+            ownership: 1
+            passthru: 0
+            metadata: 1
+          - name: /group1/particles
+            ownership: 1
+            passthru: 0
+            metadata: 1
+  - nodeCount: 1
+    func: consumer
+    nprocs: 1
+    cmdline: ./consumer_mpmd
+    inports:
+      - filename: outfile.h5
+        dsets:
+          - name: /group1/grid
+            passthru: 0
+            metadata: 1
+          - name: /group1/particles
+            passthru: 0
+            metadata: 1
