@@ -1,4 +1,4 @@
-nodes:
+tasks:
   - func: producer
     start_proc: 0
     nprocs: 3

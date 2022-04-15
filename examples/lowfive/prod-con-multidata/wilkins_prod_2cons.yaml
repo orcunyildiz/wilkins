@@ -1,4 +1,4 @@
-nodes:
+tasks:
   - func: producer_1
     start_proc: 0
     nprocs: 3
@@ -7,10 +7,10 @@ nodes:
         dsets:
           - name: /group1/grid
             passthru: 1
-            metadata: 1
+            metadata: 0
           - name: /group1/particles
             passthru: 1
-            metadata: 1
+            metadata: 0
   - func: consumer_1_2
     start_proc: 3
     nprocs: 1

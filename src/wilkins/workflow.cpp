@@ -96,7 +96,7 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
     try
     {
         YAML::Node root = YAML::LoadFile(yaml_path);
-        const YAML::Node& nodes = root["nodes"];
+        const YAML::Node& nodes = root["tasks"];
         /*
         * iterate over the list of nodes, creating and populating WorkflowNodes as we go
         */
@@ -109,17 +109,17 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
             //orc@08-03: adding the subgraph API
             int index = 0;
 
-            int nodeCount = 1;
-            if(nodes[i]["nodeCount"])
-                nodeCount = nodes[i]["nodeCount"].as<int>();
+            int taskCount = 1;
+            if(nodes[i]["taskCount"])
+                taskCount = nodes[i]["taskCount"].as<int>();
 
-            if (nodeCount < 1)
+            if (taskCount < 1)
             {
-             	fprintf(stderr, "Error: node count cannot be smaller than 1\n");
+             	fprintf(stderr, "Error: task count cannot be smaller than 1\n");
                 exit(1);
             }
 
-            for(std::size_t m=0; m<nodeCount; m++)
+            for(std::size_t m=0; m<taskCount; m++)
             {
                 WorkflowNode node;
                 node.out_links.clear();
@@ -129,7 +129,7 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
 
                 node.nprocs = nodes[i]["nprocs"].as<int>();
                 node.func =  nodes[i]["func"].as<std::string>();
-                if (nodeCount > 1) node.func +=  "_" + to_string(index);
+                if (taskCount > 1) node.func +=  "_" + to_string(index);
                 //node.start_proc = nodes[i]["start_proc"].as<int>(); //orc@10-03: omitting start_proc, and calculating it ourselves instead
                 node.start_proc = startProc;
                 startProc += node.nprocs;
@@ -144,7 +144,7 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
                         //orc@24-03: this is to generate matching data reqs (dataflows) w subgraph API
                         //also using same filename convention on the user L5 code (since wilkins::init fetches the filename/dset from Workflow)
                         //alternatives: i) wilkins provides filenames to user for its H5 funcs ii) wilkins traps H5 calls to modify filename corresponding to these filenames w subgraph
-                        if (nodeCount > 1)
+                        if (taskCount > 1)
                         {
                             string delim = ".";
                             string preDlm = filename.substr(0, filename.find(delim));
@@ -203,7 +203,7 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
                     for (std::size_t j=0;j<outports.size();j++)
                     {
                         string filename = outports[j]["filename"].as<std::string>();
-                        if (nodeCount > 1)
+                        if (taskCount > 1)
                         {
                             string delim = ".";
                             string preDlm = filename.substr(0, filename.find(delim));
@@ -249,7 +249,7 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
 
                 workflow.nodes.push_back( node );
                 index++;
-             }// End for nodeCount
+             }// End for taskCount
          }// End for workflow.nodes
 
         // linking the nodes //orc@21-03: w subgraph API, adding more linking options for fan-in and fan-out

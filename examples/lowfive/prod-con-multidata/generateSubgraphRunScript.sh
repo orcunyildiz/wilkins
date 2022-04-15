@@ -3,7 +3,7 @@ echo -n "mpirun -l " >> runWilkins.sh
 
 cat wilkins_prod_con.yaml | grep cmdline | awk -F: '{print $2}' > cmdline.txt
 cat wilkins_prod_con.yaml | grep nprocs | awk -F: '{print $2}' > nprocs.txt
-cat wilkins_prod_con.yaml | grep nodeCount | awk -F: '{print $2}' > nodeCount.txt
+cat wilkins_prod_con.yaml | grep taskCount | awk -F: '{print $2}' > nodeCount.txt
 
 count=$(cat nprocs.txt | wc -l)
 for ((i=1;i<=$count;i++))

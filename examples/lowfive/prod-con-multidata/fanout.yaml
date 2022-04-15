@@ -1,5 +1,5 @@
-nodes:
-  - nodeCount: 1
+tasks:
+  - taskCount: 1
     func: producer
     nprocs: 3
     cmdline: ./producer_mpmd
@@ -12,7 +12,7 @@ nodes:
           - name: /group1/particles
             passthru: 1
             metadata: 0
-  - nodeCount: 2
+  - taskCount: 2
     func: consumer
     nprocs: 1
     cmdline: ./consumer_mpmd

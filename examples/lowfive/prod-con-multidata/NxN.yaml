@@ -1,5 +1,5 @@
-nodes:
-  - nodeCount: 2
+tasks:
+  - taskCount: 2
     func: producer
     nprocs: 3
     cmdline: ./producer_mpmd
@@ -14,7 +14,7 @@ nodes:
             ownership: 1
             passthru: 0
             metadata: 1
-  - nodeCount: 2
+  - taskCount: 2
     func: consumer
     nprocs: 1
     cmdline: ./consumer_mpmd
