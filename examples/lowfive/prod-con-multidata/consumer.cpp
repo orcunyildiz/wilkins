@@ -24,25 +24,28 @@ using namespace wilkins;
 void consumer_f (Wilkins* wilkins,
                  std::string prefix,
                  int threads, int mem_blocks,
-                 int con_nblocks, std::vector<int>& index_vec)
+                 int con_nblocks)
 {
-    fmt::print("Entered consumer {}\n", index_vec[0]);
+    fmt::print("Entered consumer\n");
 
     communicator local = wilkins->local_comm_handle();
 
     l5::DistMetadataVOL vol_plugin = wilkins->init();
     hid_t plist = wilkins->plist();
 
+    //orc@15-04: obtaining filenames via wilkins instead of cmdline args
+    vector<std::string> subgraph_filenames = wilkins->filenames();
+
     // --- consumer ranks running user task code ---
 
     //orc@21-03: testing subgraph API
     //orc@23-03: in case of fan-in, consumer behaves like aggregator
-    for (auto index : index_vec)
+    for (auto filename : subgraph_filenames)
     {
         //currently, index is obtained as args. alternatives:
-            //i) wilkins provides filenames to user for its H5 funcs
+            //i) wilkins provides filenames to user for its H5 funcs. As of @15-04, using this way.
             //ii) wilkins traps H5 calls to modify filename corresponding to these filenames w subgraph
-        string filename = "outfile_"  + to_string(index) + ".h5";
+        //string filename = "outfile_"  + to_string(index) + ".h5";
 
         // open the file and the dataset
         hid_t file        = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, plist);
@@ -127,11 +130,6 @@ int main(int argc, char* argv[])
     std::string config_file = "wilkins_prod_con.yaml";
     Wilkins* wilkins = new Wilkins(MPI_COMM_WORLD, config_file);
 
-    //orc@22-03: fan-in case (emulating aggregator)
-    std::vector<int> index_vec;
-    for (int i=1; i<argc; i++)
-        index_vec.push_back(atoi(argv[i])); //TODO: we can give these index vec via wilkins as well
-
     fmt::print("Halo from Wilkins with configuration for {}\n", config_file.c_str());
 
     int                       global_nblocks    = world.size();   // global number of blocks
@@ -172,7 +170,7 @@ int main(int argc, char* argv[])
     // producer also needs to know this number so it can match collective operations
     int con_nblocks = pow(2, dim) * global_nblocks;
 
-    consumer_f(wilkins, prefix, threads, mem_blocks, con_nblocks, index_vec);
+    consumer_f(wilkins, prefix, threads, mem_blocks, con_nblocks);
 
     if(!wilkins_master())
         MPI_Finalize();

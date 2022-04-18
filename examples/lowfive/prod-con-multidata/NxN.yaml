@@ -5,6 +5,7 @@ tasks:
     cmdline: ./producer_mpmd
     outports:
       - filename: outfile.h5
+        range: [100,200]
         dsets:
           - name: /group1/grid
             ownership: 1
@@ -20,6 +21,7 @@ tasks:
     cmdline: ./consumer_mpmd
     inports:
       - filename: outfile.h5
+        range: [100,200]
         dsets:
           - name: /group1/grid
             passthru: 0

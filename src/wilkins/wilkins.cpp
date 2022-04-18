@@ -140,6 +140,8 @@ Wilkins::init()
 
     diy::mpi::communicator local;
 
+    std::set<std::string> filenames; //orc: we can have multiple intercoms per filename
+
     //orc@26-10: if not wilkins_master, MPMD mode, creating comms ourselves
     if (!wilkins_master())
     {
@@ -189,6 +191,8 @@ Wilkins::init()
                 //vol_plugin.set_memory(filename, dset);
                 vol_plugin.set_memory(filename, "*");
 
+            filenames.insert(filename);
+
 	    fmt::print("PRODUCER:passthru = {}, metadata = {}, ownership = {}, filename = {}, dset = {}\n", df->out_passthru(), df->out_metadata(), df->ownership(), filename, dset);
 
          }
@@ -224,6 +228,8 @@ Wilkins::init()
                 //vol_plugin.set_memory(filename, dset);
                 vol_plugin.set_memory(filename, "*");
 
+            filenames.insert(filename);
+
             fmt::print("CONSUMER: passthru = {}, metadata = {}, filename = {}, dset = {}\n", pair.first->in_passthru(), pair.first->in_metadata(), filename, dset);
 
             //orc@13-07: wait for data to be ready for the specific intercomm
@@ -234,6 +240,8 @@ Wilkins::init()
         }
 
     } //endif consumer
+
+    this->filenames_.assign(filenames.begin(), filenames.end());
 
     return vol_plugin;
 
@@ -357,7 +365,6 @@ Wilkins::build_intercomms()
     //I'm a producer
     if (!out_dataflows.empty())
     {
-
         for (Dataflow* df : out_dataflows)
         {
             if (df->sizes()->con_start == df->sizes()->prod_start)
@@ -372,6 +379,7 @@ Wilkins::build_intercomms()
             }
             else
             {
+
                 MPI_Comm intercomm_;
                 int remote_leader = df->sizes()->con_start;
                 MPI_Intercomm_create(local, 0, world_comm_, remote_leader,  0, &intercomm_);
@@ -592,6 +600,15 @@ Wilkins::plist()
 {
 
 return this->plist_;
+
+}
+
+vector<std::string>
+wilkins::
+Wilkins::filenames()
+{
+
+return this->filenames_;
 
 }
 

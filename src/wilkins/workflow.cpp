@@ -1,5 +1,7 @@
 #include <wilkins/workflow.hpp>
 #include <string.h>
+#include <numeric>
+
 void
 WorkflowNode::add_out_link(int link)
 {
@@ -103,6 +105,8 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
 
         int startProc = 0; //orc@10-03: eliminating start proc
 
+        vector<int> file_range(100); //orc@15-04: used in subgraph API
+
         for (std::size_t i=0;i<nodes.size();i++)
         {
 
@@ -118,6 +122,8 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
              	fprintf(stderr, "Error: task count cannot be smaller than 1\n");
                 exit(1);
             }
+
+            iota(file_range.begin(), file_range.end(), 1); //initializing in case user doesn't define in YAML
 
             for(std::size_t m=0; m<taskCount; m++)
             {
@@ -141,15 +147,20 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
                     {
 
                         string filename = inports[j]["filename"].as<std::string>();
+
+                     	if(inports[j]["range"])
+                            file_range = inports[j]["range"].as<std::vector<int>>();
                         //orc@24-03: this is to generate matching data reqs (dataflows) w subgraph API
                         //also using same filename convention on the user L5 code (since wilkins::init fetches the filename/dset from Workflow)
                         //alternatives: i) wilkins provides filenames to user for its H5 funcs ii) wilkins traps H5 calls to modify filename corresponding to these filenames w subgraph
+                        //as of @18-04: wee are obtaining this filename range via YAML, and providing to the user ourselves.
                         if (taskCount > 1)
                         {
                             string delim = ".";
                             string preDlm = filename.substr(0, filename.find(delim));
                             string postDlm = filename.substr(filename.find(delim), string::npos);
-                            filename = preDlm + "_" + to_string(index) + postDlm;
+                            //filename = preDlm + "_" + to_string(index) + postDlm;
+                            filename = preDlm + "_" + to_string(file_range[index]) + postDlm;
                         }
                         //orc@09-01: not sure whether dsets is optional or not
                         const YAML::Node& dsets = inports[j]["dsets"];
@@ -203,12 +214,17 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
                     for (std::size_t j=0;j<outports.size();j++)
                     {
                         string filename = outports[j]["filename"].as<std::string>();
+
+                        if(outports[j]["range"])
+                            file_range = outports[j]["range"].as<std::vector<int>>();
+
                         if (taskCount > 1)
                         {
                             string delim = ".";
                             string preDlm = filename.substr(0, filename.find(delim));
                             string postDlm = filename.substr(filename.find(delim), string::npos);
-                            filename = preDlm + "_" + to_string(index) + postDlm;
+                            //filename = preDlm + "_" + to_string(index) + postDlm;
+                            filename = preDlm + "_" + to_string(file_range[index]) + postDlm;
                         }
 
                         const YAML::Node& dsets = outports[j]["dsets"];
@@ -324,7 +340,8 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
                             //orc: using the existing link for fan-in (we created a single link so far)
                      	    string preDlm_link = workflow.links[i].name.substr(0, workflow.links[i].name.find(delim));
                             string postDlm_link = workflow.links[i].name.substr(workflow.links[i].name.find(delim), string::npos);
-                            workflow.links[i].name = preDlm_link + "_" + to_string(fanin_cnt-1) + postDlm_link;
+                            //workflow.links[i].name = preDlm_link + "_" + to_string(fanin_cnt-1) + postDlm_link;
+                            workflow.links[i].name = preDlm_link + "_" + to_string(file_range[fanin_cnt-1]) + postDlm_link;
 
                      	    workflow.links[i].prod = j;
                             workflow.links[i].out_passthru = outPort.passthru;

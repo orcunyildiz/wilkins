@@ -25,19 +25,22 @@ void producer_f (Wilkins* wilkins,
                  std::string prefix,
                  int threads, int mem_blocks,
                  Bounds domain,
-                 int global_nblocks, int dim, size_t local_num_points, std::vector<int>& index_vec)
+                 int global_nblocks, int dim, size_t local_num_points)
 {
 
-    fmt::print("Entered producer {}\n", index_vec[0]);
+    fmt::print("Entered producer\n");
 
     communicator local = wilkins->local_comm_handle();
 
     l5::DistMetadataVOL vol_plugin = wilkins->init();
     hid_t plist = wilkins->plist();
 
+    //orc@15-04: obtaining filenames via wilkins instead of cmdline args
+    vector<std::string> subgraph_filenames = wilkins->filenames();
+
     // --- producer ranks running user task code  ---
     //orc@23-03: in case of fan-out, producer behaves like orchestrator
-    for (auto index : index_vec)
+    for (auto filename : subgraph_filenames)
     {
         // diy setup for the producer
         diy::FileStorage                prod_storage(prefix);
@@ -58,10 +61,9 @@ void producer_f (Wilkins* wilkins,
         // create a new file and group using default properties
         //orc@21-03: testing subgraph API
         //currently, index is obtained as args. alternatives:
-            //i) wilkins provides filenames to user for its H5 funcs
+            //i) wilkins provides filenames to user for its H5 funcs. As of @15-04, using this way.
             //ii) wilkins traps H5 calls to modify filename corresponding to these filenames w subgraph
 
-        string filename = "outfile_" +  to_string(index) + ".h5";
         hid_t file = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, plist);
         //hid_t file = H5Fcreate("outfile.h5", H5F_ACC_TRUNC, H5P_DEFAULT, plist);
         hid_t group = H5Gcreate(file, "/group1", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
@@ -125,10 +127,6 @@ int main(int argc, char* argv[])
     std::string config_file = "wilkins_prod_con.yaml";
     Wilkins* wilkins = new Wilkins(MPI_COMM_WORLD, config_file);
 
-    std::vector<int> index_vec;
-    for (int i=1; i<argc; i++)
-        index_vec.push_back(atoi(argv[i])); //TODO: we can give these index vec via wilkins as well
-
     fmt::print("Halo from Wilkins with configuration for {}\n", config_file.c_str());
 
     int                       global_nblocks    = world.size();   // global number of blocks
@@ -182,7 +180,7 @@ int main(int argc, char* argv[])
 
     size_t global_npoints = global_nblocks * local_npoints;         // all block have same number of points
 
-    producer_f(wilkins, prefix, threads, mem_blocks, domain, global_nblocks, dim, local_npoints, index_vec);
+    producer_f(wilkins, prefix, threads, mem_blocks, domain, global_nblocks, dim, local_npoints);
 
     if(!wilkins_master())
         MPI_Finalize();

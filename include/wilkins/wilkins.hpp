@@ -68,6 +68,7 @@ public:
     Comm* world;
 
     hid_t plist();
+    vector<std::string> filenames();
 
     l5::DistMetadataVOL build_lowfive(); //orc@27-10: deprecated, will delete later. Keeping it as reference for the time being.
     l5::DistMetadataVOL init();
@@ -99,6 +100,9 @@ private:
 
     //orc@12-07: plist that will be provided to the user code
     hid_t plist_;
+
+    //wilkins provides filenames to th user tasks for subgraph API
+    vector<std::string> filenames_;
 
     //orc@27-10: deprecated as they are used in build_lowfive(), which is deprecated as well.
     //NB: out_intercomms_ is used also in commit().
