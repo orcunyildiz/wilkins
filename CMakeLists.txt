@@ -1,7 +1,8 @@
 project                     (Wilkins)
 cmake_minimum_required      (VERSION 3.9)
 
-option                      (lowfive            "Build Wilkins with Lowfive"  ON)
+option                      (lowfive                   "Build Wilkins with Lowfive"         ON)
+option                      (wilkins_python            "Build Wilkins with python bindings" ON)
 
 set                         (CMAKE_POSITION_INDEPENDENT_CODE ON)
 
@@ -67,4 +68,6 @@ add_subdirectory            (src)
 add_subdirectory            (examples)
 
 #python bindings
-add_subdirectory            (bindings/python)
+if                          (wilkins_python)
+    add_subdirectory        (bindings/python)
+endif                       (wilkins_python)

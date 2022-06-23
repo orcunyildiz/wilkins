@@ -3,17 +3,14 @@
 #include <pybind11/numpy.h>
 namespace py = pybind11;
 
+#include <mpi.h>
+#include <mpi4py/mpi4py.h>
+
 #include <wilkins/wilkins.hpp>
 #include <wilkins/context.h>
 
-#include <mpi.h>
-
-#include    <lowfive/vol-dist-metadata.hpp>
-
 using namespace wilkins;
 using namespace std;
-
-#include <mpi4py/mpi4py.h>
 
 using communicator = MPI_Comm;
 
