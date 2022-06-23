@@ -4,8 +4,8 @@
 
 #include    <dlfcn.h>
 
-#include <diy/mpi/communicator.hpp>
-using communicator = diy::mpi::communicator;
+#include    <diy/master.hpp>
+using communicator = MPI_Comm;
 
 #include <wilkins/wilkins.hpp>
 #include <wilkins/context.h>
@@ -31,7 +31,7 @@ int main(int argc, char* argv[])
 
     communicator local = wilkins->local_comm_handle();
     communicator local_dup;
-    local_dup.duplicate(local); //duplicate of the local communicator for SP mode
+    MPI_Comm_dup(local, &local_dup); //duplicate of the local communicator for SP mode
 
     std::vector<communicator> intercomms = wilkins->build_intercomms();
 
@@ -40,7 +40,7 @@ int main(int argc, char* argv[])
     std::vector<std::vector<communicator>> vec_intercomms_shared;
 
     communicator world_dup;
-    world_dup.duplicate(world);
+    MPI_Comm_dup(world, &world_dup);
 
     for (size_t i = 0; i < workflow.nodes.size(); i++)
     {
@@ -87,8 +87,8 @@ int main(int argc, char* argv[])
 
      	    //orc@05-11: creating duplicate local comms for each task
             communicator* local_dup = new communicator();
-            //local_dup->duplicate(world);
-            local_dup->duplicate(local); //orc@24-10: required for supporting free mixing of TP & SP
+            //local_dup->duplicate(local); //orc@24-10: required for supporting free mixing of TP & SP
+            MPI_Comm_dup(local, local_dup); //orc@24-10: required for supporting free mixing of TP & SP
             local_comms.emplace_back(local_dup);
 
             //orc@05-11: splitting the main intercomm vector per task in the shared mode

@@ -3,9 +3,9 @@ imports:
     lowfive: ./ext/lowfive
 
 git module yaml-cpp:
-    url: git://github.com/jbeder/yaml-cpp.git
-    rev: edadfecdc644e2a75ef6074e7afe74a3ebb44078
+    url: ssh://git@github.com/jbeder/yaml-cpp.git
+    rev: c73ee34704c512ebe915b283645aefa9f424a22f
 
 git module lowfive:
     url: ssh://git@github.com/diatomic/lowfive
-    rev: f9d2afd47084051957dc949ce150d58fc32f076b
+    rev: 694ab213ec1c708ffd18a78075659ff79d58cf6e

@@ -1,5 +1,8 @@
 #include <wilkins/wilkins.hpp>
 
+#include <diy/mpi/communicator.hpp>
+using diy_comm = diy::mpi::communicator;
+
 // constructor
 wilkins::
 Wilkins::Wilkins(CommHandle world_comm,
@@ -136,9 +139,9 @@ Wilkins::init()
 {
 
     std::string dflowName, full_path, filename, dset;
-    std::vector<diy::mpi::communicator> communicators;
+    std::vector<MPI_Comm> communicators;
 
-    diy::mpi::communicator local;
+    MPI_Comm local;
 
     std::set<std::string> filenames; //orc: we can have multiple intercoms per filename
 
@@ -236,7 +239,7 @@ Wilkins::init()
             //orc@17-09: moving here since now we can have multiple intercomms for the same prod-con pair
             //placing this after intercomm creation would result in a deadlock therefore
             if (pair.first->in_passthru() && !pair.first->in_metadata())
-                communicators[index-1].barrier();
+                diy_comm(communicators[index-1]).barrier();
         }
 
     } //endif consumer
@@ -254,9 +257,9 @@ Wilkins::initStandalone()
 {
 
     std::string dflowName, full_path, filename, dset;
-    std::vector<diy::mpi::communicator> communicators;
+    std::vector<MPI_Comm> communicators;
 
-    diy::mpi::communicator local;
+    MPI_Comm local;
 
     //orc@26-10: if not wilkins_master, MPMD mode, creating comms ourselves
     if (!wilkins_master())
@@ -284,7 +287,7 @@ Wilkins::initStandalone()
             //orc@17-09: moving here since now we can have multiple intercomms for the same prod-con pair
             //placing this after intercomm creation would result in a deadlock therefore
             if (pair.first->in_passthru() && !pair.first->in_metadata())
-                communicators[index-1].barrier();
+                diy_comm(communicators[index-1]).barrier();
 
         }
 
@@ -350,16 +353,17 @@ Wilkins::build_intercomms(std::string task_name)
     return shared_communicators;
 }
 
-std::vector<diy::mpi::communicator>
+std::vector<MPI_Comm>
 wilkins::
 Wilkins::build_intercomms()
 {
 
-    std::vector<diy::mpi::communicator> communicators, out_communicators, in_communicators;
-    diy::mpi::communicator intercomm, local_orig;
-    local_orig = diy::mpi::communicator(this->local_comm_handle());
-    diy::mpi::communicator local;
-    local.duplicate(local_orig);
+    std::vector<MPI_Comm> communicators, out_communicators, in_communicators;
+    MPI_Comm intercomm, local_orig;
+    //local_orig = MPI_Comm(this->local_comm_handle());
+    local_orig = this->local_comm_handle();
+    MPI_Comm local;
+    MPI_Comm_dup(local_orig, &local);
 
     std::vector<std::string> shared_dataflows;
     //I'm a producer
@@ -371,7 +375,7 @@ Wilkins::build_intercomms()
             {
                 if(std::find(shared_dataflows.begin(), shared_dataflows.end(), df->name()) == shared_dataflows.end())
                 {
-                    intercomm.duplicate(local_orig); //orc@05-11: need duplicate intercomms for the shared mode
+                    MPI_Comm_dup(local_orig, &intercomm); //orc@05-11: need duplicate intercomms for the shared mode
                     shared_dataflows.push_back(df->name());
                     communicators.push_back(intercomm);
                     out_communicators.push_back(intercomm);
@@ -383,9 +387,9 @@ Wilkins::build_intercomms()
                 MPI_Comm intercomm_;
                 int remote_leader = df->sizes()->con_start;
                 MPI_Intercomm_create(local, 0, world_comm_, remote_leader,  0, &intercomm_);
-                intercomm = diy::mpi::communicator(intercomm_);
-                communicators.push_back(intercomm);
-                out_communicators.push_back(intercomm);
+                //intercomm = MPI_Comm(intercomm_);
+                communicators.push_back(intercomm_);
+                out_communicators.push_back(intercomm_);
             }
 
         }
@@ -403,7 +407,7 @@ Wilkins::build_intercomms()
             {
                 if(std::find(shared_dataflows.begin(), shared_dataflows.end(), pair.first->name()) == shared_dataflows.end())
                 {
-                    intercomm.duplicate(local_orig); //orc@05-11: need duplicate intercomms for the shared mode
+                    MPI_Comm_dup(local_orig, &intercomm); //orc@05-11: need duplicate intercomms for the shared mode
                     shared_dataflows.push_back(pair.first->name());
                     communicators.push_back(intercomm);
                     in_communicators.push_back(intercomm);
@@ -414,9 +418,9 @@ Wilkins::build_intercomms()
                 MPI_Comm intercomm_;
                 int remote_leader = pair.first->sizes()->prod_start;
                 MPI_Intercomm_create(local, 0, world_comm_, remote_leader,  0, &intercomm_);
-                intercomm = diy::mpi::communicator(intercomm_);
-                communicators.push_back(intercomm);
-                in_communicators.push_back(intercomm);
+                //intercomm = MPI_Comm(intercomm_);
+                communicators.push_back(intercomm_);
+                in_communicators.push_back(intercomm_);
             }
 
         }
@@ -442,9 +446,9 @@ Wilkins::build_lowfive()
     int passthru = 0; //orc@13-07: this should be also for each prod-con pair
     int metadata = 1; //orc@13-07: this should be also for each prod-con pair
     int ownership = 0;
-    std::vector<diy::mpi::communicator> communicators, out_communicators, in_communicators;
-    diy::mpi::communicator intercomm, local;
-    local = diy::mpi::communicator(this->local_comm_handle());
+    std::vector<MPI_Comm> communicators, out_communicators, in_communicators;
+    MPI_Comm intercomm, intercomm_, local;
+    local = this->local_comm_handle();
     std::string dflowName, full_path, filename, dset;
 
     //I'm a producer
@@ -469,16 +473,14 @@ Wilkins::build_lowfive()
                 intercomm   = local;
             else
             {
-                MPI_Comm intercomm_;
 	        int remote_leader = df->sizes()->con_start;
                 MPI_Intercomm_create(local, 0, world_comm_, remote_leader,  0, &intercomm_);
-                intercomm = diy::mpi::communicator(intercomm_);
             }
 
-            fmt::print("local.size() = {}, intercomm.size() = {}, passthru = {}, metadata = {}, ownership = {}, filename = {}, dset = {}\n", local.size(), intercomm.size(), passthru, metadata, ownership, filename, dset);
+            //fmt::print("local.size() = {}, intercomm.size() = {}, passthru = {}, metadata = {}, ownership = {}, filename = {}, dset = {}\n", local.size(), intercomm.size(), passthru, metadata, ownership, filename, dset);
 
-            communicators.push_back(intercomm);
-            out_communicators.push_back(intercomm);
+            communicators.push_back(intercomm_);
+            out_communicators.push_back(intercomm_);
 
         }
 
@@ -511,16 +513,14 @@ Wilkins::build_lowfive()
                 intercomm   = local;
             else
             {
-                MPI_Comm intercomm_;
                 int remote_leader = pair.first->sizes()->prod_start;
      	        MPI_Intercomm_create(local, 0, world_comm_, remote_leader,  0, &intercomm_);
-                intercomm = diy::mpi::communicator(intercomm_);
             }
 
-            fmt::print("local.size() = {}, intercomm.size() = {}, passthru = {}, metadata = {}, filename = {}, dset = {}\n", local.size(), intercomm.size(), passthru, metadata, filename, dset);
+            //fmt::print("local.size() = {}, intercomm.size() = {}, passthru = {}, metadata = {}, filename = {}, dset = {}\n", local.size(), intercomm.size(), passthru, metadata, filename, dset);
 
-            communicators.push_back(intercomm);
-            in_communicators.push_back(intercomm);
+            communicators.push_back(intercomm_);
+            in_communicators.push_back(intercomm_);
 
         }
 
@@ -582,7 +582,7 @@ Wilkins::build_lowfive()
             //orc@17-09: moving here since now we can have multiple intercomms for the same prod-con pair
 	    //placing this after intercomm creation would result in a deadlock therefore
             if (passthru && !metadata)
-                communicators[index-1].barrier();
+                diy_comm(communicators[index-1]).barrier();
         }
 
     }
@@ -618,7 +618,7 @@ wilkins::
 Wilkins::commit()
 {
 
-    std::vector<diy::mpi::communicator> intercomms;
+    std::vector<MPI_Comm> intercomms;
 
     if (!wilkins_master())
         intercomms = this->out_intercomms_;
@@ -629,7 +629,7 @@ Wilkins::commit()
     for (Dataflow* df : out_dataflows)
     {
         if (df->out_passthru() && !df->out_metadata())
-                intercomms[i].barrier();
+                diy_comm(intercomms[i]).barrier();
 
         i++;
     }

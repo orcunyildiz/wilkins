@@ -58,6 +58,7 @@ struct MetadataVOL: public LowFive::VOLBase
     LocationPatterns            memory;
     LocationPatterns            passthru;
     LocationPatterns            zerocopy;
+    bool                        keep = false;       // whether to keep files in the metadata after they are closed
 
                     MetadataVOL()
                     {}
@@ -114,12 +115,23 @@ struct MetadataVOL: public LowFive::VOLBase
     // locate an object in the metadata of one file by its full path, which uniquely identifies one object
     Object*         locate(std::string filename, std::string full_path) const
     {
-        Object* obj;
         auto it = files.find(filename);
         if (it == files.end())
             return NULL;
 
         return it->second->search(full_path).exact();
+    }
+
+    static H5I_type_t   get_type(Object* o)
+    {
+        if (o->type == ObjectType::File)
+            return H5I_FILE;
+        else if (o->type == ObjectType::Group)
+            return H5I_GROUP;
+        else if (o->type == ObjectType::Dataset)
+            return H5I_DATASET;
+        else
+            throw MetadataError("cannot identify object type");
     }
 
     // record intended ownership of a dataset
@@ -138,6 +150,11 @@ struct MetadataVOL: public LowFive::VOLBase
         memory.emplace_back(LocationPattern { filename, pattern });
     }
 
+    void set_keep(bool keep_)
+    {
+        keep = keep_;
+    }
+
     // ref: https://www.geeksforgeeks.org/wildcard-character-matching/
     // checks if two given strings; the first string may contain wildcard characters
     static bool match(const char *first, const char * second, bool partial = false)
@@ -149,10 +166,10 @@ struct MetadataVOL: public LowFive::VOLBase
             return partial;
 
         if (*first == '?' || *first == *second)
-            return match(first+1, second+1);
+            return match(first+1, second+1, partial);
 
         if (*first == '*')
-            return match(first+1, second) || match(first, second+1);
+            return match(first+1, second, partial) || match(first, second+1, partial);
 
         return partial;
     }
@@ -169,7 +186,7 @@ struct MetadataVOL: public LowFive::VOLBase
 
     int find_match(const std::string& filename, const std::string& full_path, const LocationPatterns& patterns, bool partial = false) const
     {
-        for (int i = 0; i < patterns.size(); ++i)
+        for (int i = 0; i < static_cast<int>(patterns.size()); ++i)
         {
             auto& x = patterns[i];
             if (!match(x.filename.c_str(), filename.c_str())) continue;
@@ -183,10 +200,10 @@ struct MetadataVOL: public LowFive::VOLBase
         find_matches(const std::string& filename, const std::string& full_path, const LocationPatterns& patterns, bool partial = false) const
     {
         std::vector<int> result;
-        for (int i = 0; i < patterns.size(); ++i)
+        for (int i = 0; i < static_cast<int>(patterns.size()); ++i)
         {
             auto& x = patterns[i];
-            if (x.filename != filename) continue;
+            if (!match(x.filename.c_str(), filename.c_str())) continue;
             if (match(x.pattern.c_str(), full_path.c_str(), partial))
                 result.push_back(i);
         }
@@ -236,13 +253,18 @@ struct MetadataVOL: public LowFive::VOLBase
     void            attr_exists(void *obj, va_list arguments);
     void            attr_iter(void *obj, va_list arguments);
 
+    void *          object_open(void *obj, const H5VL_loc_params_t *loc_params, H5I_type_t *opened_type, hid_t dxpl_id, void **req) override;
+    herr_t          object_copy(void *src_obj, const H5VL_loc_params_t *src_loc_params, const char *src_name, void *dst_obj, const H5VL_loc_params_t *dst_loc_params, const char *dst_name, hid_t ocpypl_id, hid_t lcpl_id, hid_t dxpl_id, void **req) override;
     herr_t          object_get(void *obj, const H5VL_loc_params_t *loc_params, H5VL_object_get_t get_type, hid_t dxpl_id, void **req, va_list arguments) override;
     herr_t          object_specific(void *obj, const H5VL_loc_params_t *loc_params, H5VL_object_specific_t specific_type, hid_t dxpl_id, void **req, va_list arguments) override;
+    herr_t          object_optional(void *obj, int op_type, hid_t dxpl_id, void **req, va_list arguments) override;
 
     herr_t          introspect_get_conn_cls(void *obj, H5VL_get_conn_lvl_t lvl, const H5VL_class_t **conn_cls) override;
     herr_t          introspect_opt_query(void *obj, H5VL_subclass_t cls, int opt_type, hbool_t *supported) override;
 
     herr_t          blob_put(void *obj, const void *buf, size_t size, void *blob_id, void *ctx) override;
+    herr_t          blob_get(void *obj, const void *blob_id, void *buf, size_t size, void *ctx) override;
+    herr_t          blob_specific(void *obj, void *blob_id, H5VL_blob_specific_t specific_type, va_list arguments) override;
 
     herr_t          token_cmp(void *obj, const H5O_token_t *token1, const H5O_token_t *token2, int *cmp_value) override;
 

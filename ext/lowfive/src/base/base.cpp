@@ -1,6 +1,7 @@
 #include <lowfive/vol-base.hpp>
 #include <fmt/core.h>
 #include <fmt/ostream.h>
+#include "../log-private.hpp"
 
 hid_t LowFive::VOLBase::connector_id = -1;
 
@@ -18,14 +19,14 @@ H5VL_class_t LowFive::VOLBase::connector =
         NULL, //&OUR_pass_through_info_cmp,                  /* compare */
         &_info_free,                                /* free    */
         &_info_to_str,                              /* to_str  */
-        &_str_to_info,                              /* from_str */
+        &_str_to_info                               /* from_str */
     },
     {                                           /* wrap_cls */
         &_wrap_get_object,                          /* get_object   */
         &_get_wrap_ctx,                             /* get_wrap_ctx */
         &_wrap_object,                              /* wrap_object  */
         &_unwrap_object,                            /* unwrap_object */
-        &_free_wrap_ctx,                            /* free_wrap_ctx */
+        &_free_wrap_ctx                             /* free_wrap_ctx */
     },
     {                                           /* attribute_cls */
         &_attr_create,                              /* create */
@@ -80,15 +81,15 @@ H5VL_class_t LowFive::VOLBase::connector =
         &_link_optional                             /* optional */
     },
     {                                           /* object_cls */
-        NULL, // OUR_pass_through_object_open,              /* open */
-        NULL, // OUR_pass_through_object_copy,              /* copy */
-        &_object_get,                                /* get */
-        &_object_specific,                           /* specific */
-        NULL  // OUR_pass_through_object_optional,          /* optional */
+        &_object_open,                              /* open */
+        &_object_copy,                              /* copy */
+        &_object_get,                               /* get */
+        &_object_specific,                          /* specific */
+        &_object_optional                           /* optional */
     },
     {                                           /* introspect_cls */
         &_introspect_get_conn_cls,                   /* get_conn_cls */
-        &_introspect_opt_query,                      /* opt_query */
+        &_introspect_opt_query                       /* opt_query */
     },
     {                                           /* request_cls */
         NULL, // OUR_pass_through_request_wait,             /* wait */
@@ -98,10 +99,10 @@ H5VL_class_t LowFive::VOLBase::connector =
         NULL, // OUR_pass_through_request_optional,         /* optional */
         NULL  // OUR_pass_through_request_free              /* free */
     },
-    {                                           /* blob_cls */
-        &_blob_put,                                  /* put */
-        NULL, // OUR_pass_through_blob_get,                 /* get */
-        NULL, // OUR_pass_through_blob_specific,            /* specific */
+    {                                                       /* blob_cls */
+        &_blob_put,                                         /* put */
+        &_blob_get,                                         /* get */
+        &_blob_specific,                                    /* specific */
         NULL, // OUR_pass_through_blob_optional             /* optional */
     },
     {                                           /* token_cls */
@@ -115,14 +116,18 @@ H5VL_class_t LowFive::VOLBase::connector =
 H5PL_type_t H5PLget_plugin_type(void) { return H5PL_TYPE_VOL; }
 const void *H5PLget_plugin_info(void)
 {
-    fmt::print(stderr, "H5PLget_plugin_info\n");
+    auto log = LowFive::get_logger();
+    log->trace("H5PLget_plugin_info\n");
+
     return &LowFive::VOLBase::connector;
 }
 
 LowFive::VOLBase::
 VOLBase()
 {
-    fmt::print(stderr, "VOLBase::VOLBase(), &info = {}\n", fmt::ptr(&info));
+    log = get_logger();
+
+    log->trace("VOLBase::VOLBase(), &info = {}\n", fmt::ptr(&info));
 
     // this is here to trigger HDF5 initialization, in case this constructor is
     // called before anything else; it would be nice to find a cleaner way to
@@ -137,21 +142,20 @@ VOLBase()
         VOLBase::info->under_vol_info = NULL;
     }
 
-    fmt::print(stderr, "VOLBase::VOLBase()\n");
     info_t::vol = this;
 }
 
 LowFive::VOLBase::
 ~VOLBase()
 {
-    // TODO: detele info
+    // TODO: delete info
 }
 
 hid_t
 LowFive::VOLBase::
 register_plugin()
 {
-    fmt::print(stderr, "registering plugin, info = {}\n", fmt::ptr(info));
+    log->trace("registering plugin, info = {}\n", fmt::ptr(info));
 
     // Singleton register the pass-through VOL connector ID
     if (connector_id < 0)
@@ -176,10 +180,10 @@ herr_t
 LowFive::VOLBase::
 _init(hid_t vipl_id)
 {
-#ifdef LOWFIVE_ENABLE_PASSTHRU_LOGGING
-    fprintf(stderr, "------- PASS THROUGH VOL INIT\n");
-#endif
-    fmt::print(stderr, "_init(), info = {}\n", fmt::ptr(info));
+    auto log = get_logger();
+
+    log->debug("------- PASS THROUGH VOL INIT");
+    log->trace("_init(), info = {}\n", fmt::ptr(info));
 
     return 0;
 }
@@ -201,9 +205,9 @@ herr_t
 LowFive::VOLBase::
 _term(void)
 {
-#ifdef LOWFIVE_ENABLE_PASSTHRU_LOGGING
-    printf("------- PASS THROUGH VOL TERM\n");
-#endif
+    auto log = get_logger();
+
+    log->debug("------- PASS THROUGH VOL TERM");
 
     herr_t result = 0;
 

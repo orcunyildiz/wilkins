@@ -1,4 +1,5 @@
 #include <lowfive/vol-base.hpp>
+#include "../log-private.hpp"
 
 /*---------------------------------------------------------------------------
  * Function:    wrap_get_object
@@ -14,13 +15,11 @@ void *
 LowFive::VOLBase::
 _wrap_get_object(const void *obj)
 {
+    auto log = get_logger();
+
     const pass_through_t *o = (const pass_through_t *)obj;
 
-#ifdef LOWFIVE_ENABLE_PASSTHRU_LOGGING
-    fprintf(stderr, "------- PASS THROUGH VOL WRAP Get object\n");
-#endif
-
-//     fprintf(stderr, "_wrap_get_object obj = %p under_object = %p\n", obj, o->under_object);
+    log->debug("------- PASS THROUGH VOL WRAP Get object");
 
     return o->vol->wrap_get_object(o->under_object);
 } /* end wrap_get_object() */
@@ -30,7 +29,6 @@ LowFive::VOLBase::
 wrap_get_object(void *obj)
 {
     void* res = H5VLget_object(obj, info->under_vol_id);
-    fprintf(stderr, "wrap_get_object obj = %p res = %p\n", obj, res);
     return res;
 }
 
@@ -48,14 +46,12 @@ herr_t
 LowFive::VOLBase::
 _get_wrap_ctx(const void *obj, void **wrap_ctx)
 {
+    auto log = get_logger();
+
     const pass_through_t *o = (const pass_through_t *)obj;
     pass_through_wrap_ctx_t *new_wrap_ctx;
 
-#ifdef LOWFIVE_ENABLE_PASSTHRU_LOGGING
-    fprintf(stderr, "------- PASS THROUGH VOL WRAP CTX Get\n");
-#endif
-
-//     fprintf(stderr, "_get_wrap_ctx obj = %p under_object = %p\n", obj, o->under_object);
+    log->debug("------- PASS THROUGH VOL WRAP CTX Get");
 
     /* Allocate new VOL object wrapping context for the pass through connector */
     new_wrap_ctx = (pass_through_wrap_ctx_t *)calloc(1, sizeof(pass_through_wrap_ctx_t));
@@ -63,6 +59,7 @@ _get_wrap_ctx(const void *obj, void **wrap_ctx)
     /* Increment reference count on underlying VOL ID, and copy the VOL info */
     new_wrap_ctx->under_vol_id = o->under_vol_id;
     H5Iinc_ref(new_wrap_ctx->under_vol_id);
+    log->trace("VOLBase::_get_wrap_ctx, inc ref hid = {}", new_wrap_ctx->under_vol_id);
     new_wrap_ctx->vol = o->vol;
 
     o->vol->get_wrap_ctx(o->under_object, &new_wrap_ctx->under_wrap_ctx);
@@ -77,8 +74,6 @@ herr_t
 LowFive::VOLBase::
 get_wrap_ctx(void *obj, void **wrap_ctx)
 {
-//     fprintf(stderr, "get_wrap_ctx obj = %p unwrap(obj) = %p\n", obj, unwrap(obj));
-
     return H5VLget_wrap_ctx(obj, info->under_vol_id, wrap_ctx);
 }
 
@@ -97,13 +92,13 @@ void *
 LowFive::VOLBase::
 _wrap_object(void *obj, H5I_type_t obj_type, void *_wrap_ctx)
 {
+    auto log = get_logger();
+
     pass_through_wrap_ctx_t *wrap_ctx = (pass_through_wrap_ctx_t *)_wrap_ctx;
     pass_through_t *new_obj;
     void *under;
 
-#ifdef LOWFIVE_ENABLE_PASSTHRU_LOGGING
-    fprintf(stderr, "------- PASS THROUGH VOL WRAP Object\n");
-#endif
+    log->debug("------- PASS THROUGH VOL WRAP Object");
 
     /* Wrap the object with the underlying VOL */
     under = wrap_ctx->vol->wrap_object(obj, obj_type, wrap_ctx->under_wrap_ctx);
@@ -120,7 +115,6 @@ LowFive::VOLBase::
 wrap_object(void *obj, H5I_type_t obj_type, void *wrap_ctx)
 {
     void* res = H5VLwrap_object(obj, obj_type, info->under_vol_id, wrap_ctx);
-    fprintf(stderr, "wrap_object: obj = %p, res = %p\n", obj, res);
     return res;
 }
 
@@ -138,12 +132,12 @@ void *
 LowFive::VOLBase::
 _unwrap_object(void *obj)
 {
+    auto log = get_logger();
+
     pass_through_t *o = (pass_through_t *)obj;
     void *under;
 
-#ifdef LOWFIVE_ENABLE_PASSTHRU_LOGGING
-    fprintf(stderr, "------- PASS THROUGH VOL UNWRAP Object\n");
-#endif
+    log->debug("------- PASS THROUGH VOL UNWRAP Object");
 
     /* Unwrap the object with the underlying VOL */
     under = o->vol->unwrap_object(o->under_object);
@@ -177,18 +171,19 @@ herr_t
 LowFive::VOLBase::
 _free_wrap_ctx(void *_wrap_ctx)
 {
+    auto log = get_logger();
+
     pass_through_wrap_ctx_t *wrap_ctx = (pass_through_wrap_ctx_t *)_wrap_ctx;
     hid_t err_id;
 
-#ifdef LOWFIVE_ENABLE_PASSTHRU_LOGGING
-    fprintf(stderr, "------- PASS THROUGH VOL WRAP CTX Free\n");
-#endif
+    log->debug("------- PASS THROUGH VOL WRAP CTX Free");
 
     err_id = H5Eget_current_stack();
 
     /* Release underlying VOL ID and wrap context */
     if(wrap_ctx->under_wrap_ctx)
         wrap_ctx->vol->free_wrap_ctx(wrap_ctx->under_wrap_ctx);
+    log->trace("VOLBase::_free_wrap_ctx, dec_ref hid = {}", wrap_ctx->under_vol_id);
     H5Idec_ref(wrap_ctx->under_vol_id);
 
     H5Eset_current_stack(err_id);

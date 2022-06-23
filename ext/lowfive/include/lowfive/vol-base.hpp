@@ -2,8 +2,10 @@
 #define LOWFIVE_VOL_BASE_HPP
 
 #include <string>
+#include <memory>
 
 #include <hdf5.h>
+#include <lowfive/log.hpp>
 
 namespace LowFive
 {
@@ -62,6 +64,8 @@ struct VOLBase
                                                                 // DM: made it static to make the environment-variable loading of VOL work;
                                                                 //     very unfortunate design, but it's the only way I can find to match HDF5 VOL design
     };
+
+    std::shared_ptr<spdlog::logger> log;
 
     static info_t* info;     // this needs to be static, since in the environment variable case, we need to configure it from _str_to_info
 
@@ -189,14 +193,16 @@ struct VOLBase
     virtual herr_t          link_optional(void *obj, hid_t under_vol_id, H5VL_link_optional_t opt_type, hid_t dxpl_id, void **req, va_list arguments);
 
     //// object
-    //void obj_open()                 {}
-    //void obj_copy()                 {}
+    static void *          _object_open(void *obj, const H5VL_loc_params_t *loc_params, H5I_type_t *opened_type, hid_t dxpl_id, void **req);
+    virtual void *          object_open(void *obj, const H5VL_loc_params_t *loc_params, H5I_type_t *opened_type, hid_t dxpl_id, void **req);
+    static herr_t          _object_copy(void *src_obj, const H5VL_loc_params_t *src_loc_params, const char *src_name, void *dst_obj, const H5VL_loc_params_t *dst_loc_params, const char *dst_name, hid_t ocpypl_id, hid_t lcpl_id, hid_t dxpl_id, void **req);
+    virtual herr_t          object_copy(void *src_obj, const H5VL_loc_params_t *src_loc_params, const char *src_name, void *dst_obj, const H5VL_loc_params_t *dst_loc_params, const char *dst_name, hid_t ocpypl_id, hid_t lcpl_id, hid_t dxpl_id, void **req);
     static herr_t          _object_get(void *obj, const H5VL_loc_params_t *loc_params, H5VL_object_get_t get_type, hid_t dxpl_id, void **req, va_list arguments);
     virtual herr_t          object_get(void *obj, const H5VL_loc_params_t *loc_params, H5VL_object_get_t get_type, hid_t dxpl_id, void **req, va_list arguments);
     static herr_t          _object_specific(void *obj, const H5VL_loc_params_t *loc_params, H5VL_object_specific_t specific_type, hid_t dxpl_id, void **req, va_list arguments);
     virtual herr_t          object_specific(void *obj, const H5VL_loc_params_t *loc_params, H5VL_object_specific_t specific_type, hid_t dxpl_id, void **req, va_list arguments);
-    //void obj_specific()             {}
-    //void obj_optional()             {}
+    static herr_t          _object_optional(void *obj, int op_type, hid_t dxpl_id, void **req, va_list arguments);
+    virtual herr_t          object_optional(void *obj, int op_type, hid_t dxpl_id, void **req, va_list arguments);
 
     //// Container/connector introspection
     static herr_t          _introspect_get_conn_cls(void *obj, H5VL_get_conn_lvl_t lvl, const H5VL_class_t **conn_cls);
@@ -207,8 +213,10 @@ struct VOLBase
     //// blob
     static herr_t          _blob_put(void *obj, const void *buf, size_t size, void *blob_id, void *ctx);
     virtual herr_t          blob_put(void *obj, const void *buf, size_t size, void *blob_id, void *ctx);
-    //void blob_get                   {}
-    //void blob_specific              {}
+    static herr_t          _blob_get(void *obj, const void *blob_id, void *buf, size_t size, void *ctx);
+    virtual herr_t          blob_get(void *obj, const void *blob_id, void *buf, size_t size, void *ctx);
+    static herr_t          _blob_specific(void *obj, void *blob_id, H5VL_blob_specific_t specific_type, va_list arguments);
+    virtual herr_t          blob_specific(void *obj, void *blob_id, H5VL_blob_specific_t specific_type, va_list arguments);
     //void blob_optional              {}
 
     //// token

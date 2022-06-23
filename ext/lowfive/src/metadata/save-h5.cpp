@@ -1,4 +1,5 @@
 #include <lowfive/metadata.hpp>
+#include "../log-private.hpp"
 
 namespace LowFive
 {
@@ -33,7 +34,7 @@ void save_children(const Hid& x, const Object* p)
         {
             // create dataset
             Hid attribute = H5Acreate(x.id, a->name.c_str(), a->type.id, a->space.id, H5P_DEFAULT, H5P_DEFAULT);
-            H5Awrite(attribute.id, a->mem_type.id, a->data);
+            H5Awrite(attribute.id, a->mem_type.id, a->data.get());
             H5Aclose(attribute.id);
         }
     }
@@ -44,7 +45,9 @@ void save_children(const Hid& x, const Object* p)
 void
 LowFive::save(const File& f, std::string filename)
 {
-    fmt::print("Saving {} to {}\n", f.name, filename);
+    auto log = LowFive::get_logger();
+
+    log->trace("Saving {} to {}", f.name, filename);
 
     Hid fid = H5Fcreate(filename.c_str(),
                        H5F_ACC_TRUNC,

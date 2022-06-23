@@ -3,6 +3,7 @@
 #include <cassert>
 #include <fmt/core.h>
 #include <fmt/ostream.h>
+#include "../log-private.hpp"
 
 LowFive::VOLBase::info_t* LowFive::VOLBase::info = NULL;
 LowFive::VOLBase* LowFive::VOLBase::info_t::vol = NULL;
@@ -21,15 +22,14 @@ void *
 LowFive::VOLBase::
 _info_copy(const void *_info)
 {
-    fprintf(stderr, "------- PASS THROUGH VOL INFO Copy (_info_copy)\n");
+    auto log = get_logger();
+
     const info_t *info = (const info_t *)_info;
     info_t *new_info;
 
-    fmt::print(stderr, "_info_copy(), info = {}\n", fmt::ptr(info));
+    log->debug("------- PASS THROUGH VOL INFO Copy");
 
-#ifdef LOWFIVE_ENABLE_PASSTHRU_LOGGING
-    fprintf(stderr, "------- PASS THROUGH VOL INFO Copy\n");
-#endif
+    log->trace("_info_copy(), info = {}", fmt::ptr(info));
 
     /* Allocate new VOL info struct for the pass through connector */
     new_info = (info_t *)calloc(1, sizeof(info_t));
@@ -39,6 +39,7 @@ _info_copy(const void *_info)
     /* Increment reference count on underlying VOL ID, and copy the VOL info */
     new_info->under_vol_id = info->under_vol_id;
     H5Iinc_ref(new_info->under_vol_id);
+    log->trace("VOLBase:_info_copy, inc_ref hid = {}", new_info->under_vol_id);
     if(info->under_vol_info)
         H5VLcopy_connector_info(new_info->under_vol_id, &(new_info->under_vol_info), info->under_vol_info);
 
@@ -62,12 +63,12 @@ herr_t
 LowFive::VOLBase::
 _info_free(void *_info)
 {
+    auto log = get_logger();
+
     info_t *info = (info_t *)_info;
     hid_t err_id;
 
-#ifdef LOWFIVE_ENABLE_PASSTHRU_LOGGING
-    fprintf(stderr, "------- PASS THROUGH VOL INFO Free\n");
-#endif
+    log->debug("------- PASS THROUGH VOL INFO Free");
 
     err_id = H5Eget_current_stack();
 
@@ -75,6 +76,7 @@ _info_free(void *_info)
     if(info->under_vol_info)
         H5VLfree_connector_info(info->under_vol_id, info->under_vol_info);
     H5Idec_ref(info->under_vol_id);
+    log->trace("VOLBase::_info_free, dec ref hid = {}", info->under_vol_id);
 
     H5Eset_current_stack(err_id);
 
@@ -99,14 +101,14 @@ herr_t
 LowFive::VOLBase::
 _info_to_str(const void *_info, char **str)
 {
+    auto log = get_logger();
+
     const info_t *info = (const info_t *)_info;
     H5VL_class_value_t under_value = (H5VL_class_value_t)-1;
     char *under_vol_string = NULL;
     size_t under_vol_str_len = 0;
 
-#ifdef LOWFIVE_ENABLE_PASSTHRU_LOGGING
-    printf("------- PASS THROUGH VOL INFO To String\n");
-#endif
+    log->debug("------- PASS THROUGH VOL INFO To String");
 
     /* Get value and string for underlying VOL connector */
     H5VLget_value(info->under_vol_id, &under_value);
@@ -144,14 +146,14 @@ herr_t
 LowFive::VOLBase::
 _str_to_info(const char *str, void **_info)
 {
+    auto log = get_logger();
+
     unsigned under_vol_value;
     const char *under_vol_info_start, *under_vol_info_end;
     hid_t under_vol_id;
     void *under_vol_info = NULL;
 
-#ifdef LOWFIVE_ENABLE_PASSTHRU_LOGGING
-    fprintf(stderr, "------- PASS THROUGH VOL INFO String To Info\n");
-#endif
+    log->debug("------- PASS THROUGH VOL INFO String To Info");
 
     /* Retrieve the underlying VOL connector value and info */
     sscanf(str, "under_vol=%u;", &under_vol_value);
@@ -182,7 +184,7 @@ _str_to_info(const char *str, void **_info)
     /* Set return value */
     *_info = info;
 
-    fprintf(stderr, "Returning, NB: info->vol not yet set\n");
+    log->trace("Returning, NB: info->vol not yet set");
 
     return 0;
 } /* end str_to_info() */

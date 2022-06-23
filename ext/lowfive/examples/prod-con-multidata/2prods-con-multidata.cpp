@@ -9,6 +9,8 @@
 
 #include    "prod-con-multidata.hpp"
 
+#include    <lowfive/log.hpp>
+
 herr_t
 fail_on_hdf5_error(hid_t stack_id, void*)
 {
@@ -19,6 +21,11 @@ fail_on_hdf5_error(hid_t stack_id, void*)
 
 int main(int argc, char* argv[])
 {
+    // logging output from LowFive (comment out for no output)
+//     l5::create_logger("trace");         // generates the most output
+//     l5::create_logger("debug");         // generates less output
+//     l5::create_logger("info");          // generates even less output (prints metadata tree)
+
     int   dim = DIM;
 
     diy::mpi::environment     env(argc, argv, MPI_THREAD_MULTIPLE);
@@ -32,12 +39,13 @@ int main(int argc, char* argv[])
     int                       metadata          = 1;              // build in-memory metadata
     int                       passthru          = 0;              // write file to disk
     bool                      shared            = false;          // producer and consumer run on the same ranks
-    float                     prod1_frac        = 0.333;          // fraction of world ranks in producer1
-    float                     prod2_frac        = 0.333;          // fraction of world ranks in producer2
+    float                     prod1_frac        = 1.0 / 3.0;      // fraction of world ranks in producer1
+    float                     prod2_frac        = 1.0 / 3.0;      // fraction of world ranks in producer2
     size_t                    local_npoints     = 100;            // points per block
     std::string               producer1_exec    = "./producer1-multidata.hx";   // name of producer1 executable
     std::string               producer2_exec    = "./producer2-multidata.hx";   // name of producer2 executable
     std::string               consumer_exec     = "./consumer-multidata.hx";    // name of consumer executable
+    std::string               log_level         = "";
 
     // default global data bounds
     Bounds domain { dim };
@@ -64,6 +72,7 @@ int main(int argc, char* argv[])
         >> Option(     "prod1_exec",producer1_exec, "name of producer1 executable")
         >> Option(     "prod2_exec",producer2_exec, "name of producer2 executable")
         >> Option(     "con_exec",  consumer_exec,  "name of consumer executable")
+        >> Option('l', "log",       log_level,      "level for the log output (trace, debug, info, ...)")
         ;
     ops
         >> Option('x',  "max-x",    domain.max[0],  "domain max x")
@@ -87,6 +96,9 @@ int main(int argc, char* argv[])
         }
         return 1;
     }
+
+    if (!log_level.empty())
+        l5::create_logger(log_level);
 
     if (metadata && !passthru)
         if (world.rank() == 0)
@@ -161,7 +173,7 @@ int main(int argc, char* argv[])
     H5Eset_auto(H5E_DEFAULT, fail_on_hdf5_error, NULL);
 
     // communicator management
-    using communicator = diy::mpi::communicator;
+    using communicator = MPI_Comm;
     MPI_Comm intercomm_, intercomm1_, intercomm2_;
     std::vector<communicator> producer1_intercomms, producer2_intercomms, consumer_intercomms;
     communicator p1_c_intercomm, p2_c_intercomm;
@@ -170,12 +182,12 @@ int main(int argc, char* argv[])
 
     if (shared)
     {
-        producer1_comm.duplicate(world);
-        producer2_comm.duplicate(world);
-        consumer_comm.duplicate(world);
+        MPI_Comm_dup(world, &producer1_comm);
+        MPI_Comm_dup(world, &producer2_comm);
+        MPI_Comm_dup(world, &consumer_comm);
 
-        p1_c_intercomm.duplicate(world);
-        p2_c_intercomm.duplicate(world);
+        MPI_Comm_dup(world, &p1_c_intercomm);
+        MPI_Comm_dup(world, &p2_c_intercomm);
 
         producer1_intercomms.push_back(p1_c_intercomm);
         producer2_intercomms.push_back(p2_c_intercomm);
@@ -185,7 +197,7 @@ int main(int argc, char* argv[])
     }
     else
     {
-        local = world.split(task);
+        MPI_Comm_split(world, task, 0, &local);
 
         if (task == producer1_task || task == producer2_task)
         {

@@ -11,10 +11,7 @@ struct File: public Object
 
     File(std::string filename_, Hid fcpl_, Hid fapl_):
         Object(ObjectType::File, filename_), fcpl(fcpl_), fapl(fapl_)
-    {
-        // debug
-        fmt::print(stderr, "Creating metadata for {}\n", filename_);
-    }
+    {}
 
     // preorder depth-first traversal
     void print() const

@@ -22,8 +22,6 @@
 //lowfive headers
 #include    "hdf5.h"
 
-#include <diy/mpi/communicator.hpp>
-
 #include    <lowfive/H5VOLProperty.hpp>
 #include    <lowfive/vol-dist-metadata.hpp>
 namespace l5 = LowFive;
@@ -73,7 +71,7 @@ public:
     l5::DistMetadataVOL build_lowfive(); //orc@27-10: deprecated, will delete later. Keeping it as reference for the time being.
     l5::DistMetadataVOL init();
     void initStandalone(); //orc@21-02: added for use cases where L5 is handled outside of wilkins.
-    vector<diy::mpi::communicator> build_intercomms();
+    vector<MPI_Comm> build_intercomms();
     vector<int> build_intercomms(std::string task_name); //orc@05-11: used for shared mode
     //orc@14-07: used in lowfive prod for signalling that data is ready
     void commit();
@@ -107,9 +105,9 @@ private:
     //orc@27-10: deprecated as they are used in build_lowfive(), which is deprecated as well.
     //NB: out_intercomms_ is used also in commit().
     //TODO: omit them once commit() is ready to be updated, which is waiting on the L5 design finalization.
-    vector<diy::mpi::communicator> intercomms_;                          // intercommunicators
-    vector<diy::mpi::communicator> out_intercomms_;                      // out_intercommunicator (prod)
-    vector<diy::mpi::communicator> in_intercomms_;                       // in_intercommunicator (con)
+    vector<MPI_Comm> intercomms_;                          // intercommunicators
+    vector<MPI_Comm> out_intercomms_;                      // out_intercommunicator (prod)
+    vector<MPI_Comm> in_intercomms_;                       // in_intercommunicator (con)
 
 };
 

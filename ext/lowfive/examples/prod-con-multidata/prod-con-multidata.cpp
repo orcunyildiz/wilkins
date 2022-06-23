@@ -9,6 +9,8 @@
 
 #include    "prod-con-multidata.hpp"
 
+#include    <lowfive/log.hpp>
+
 herr_t
 fail_on_hdf5_error(hid_t stack_id, void*)
 {
@@ -32,10 +34,11 @@ int main(int argc, char* argv[])
     int                       metadata          = 1;              // build in-memory metadata
     int                       passthru          = 0;              // write file to disk
     bool                      shared            = false;          // producer and consumer run on the same ranks
-    float                     prod_frac         = 0.5;            // fraction of world ranks in producer
+    float                     prod_frac         = 1.0 / 3.0;      // fraction of world ranks in producer
     size_t                    local_npoints     = 100;            // points per block
     std::string               producer_exec     = "./producer-multidata.hx";    // name of producer executable
     std::string               consumer_exec     = "./consumer-multidata.hx";    // name of consumer executable
+    std::string               log_level         = "";
 
 
     // default global data bounds
@@ -61,6 +64,7 @@ int main(int argc, char* argv[])
         >> Option('s', "shared",    shared,         "share ranks between producer and consumer (-p ignored)")
         >> Option('r', "prod_exec", producer_exec,  "name of producer executable")
         >> Option('c', "con_exec",  consumer_exec,  "name of consumer executable")
+        >> Option('l', "log",       log_level,      "level for the log output (trace, debug, info, ...)")
         ;
     ops
         >> Option('x',  "max-x",    domain.max[0],  "domain max x")
@@ -84,6 +88,9 @@ int main(int argc, char* argv[])
         }
         return 1;
     }
+
+    if (!log_level.empty())
+        l5::create_logger(log_level);
 
     if (metadata && !passthru)
         if (world.rank() == 0)
@@ -139,38 +146,47 @@ int main(int argc, char* argv[])
     H5Eset_auto(H5E_DEFAULT, fail_on_hdf5_error, NULL);
 
     // communicator management
-    using communicator = diy::mpi::communicator;
+    using communicator = MPI_Comm;
     MPI_Comm intercomm_;
     std::vector<communicator> producer_intercomms, consumer_intercomms;
     communicator p_c_intercomm;
     communicator local;
     communicator producer_comm, consumer_comm;
-    producer_comm.duplicate(world);
-    consumer_comm.duplicate(world);
+    MPI_Comm_dup(world, &producer_comm);
+    MPI_Comm_dup(world, &consumer_comm);
 
     if (shared)
     {
-        producer_comm.duplicate(world);
-        consumer_comm.duplicate(world);
-        p_c_intercomm.duplicate(world);
+        MPI_Comm_dup(world, &producer_comm);
+        MPI_Comm_dup(world, &consumer_comm);
+        MPI_Comm_dup(world, &p_c_intercomm);
         producer_intercomms.push_back(p_c_intercomm);
         consumer_intercomms.push_back(p_c_intercomm);
     }
     else
     {
-        local = world.split(producer);
+        if (world.size() > 1)
+        {
+            MPI_Comm_split(world, producer ? 0 : 1, 0, &local);
 
-        if (producer)
+            if (producer)
+            {
+                MPI_Intercomm_create(local, 0, world, /* remote_leader = */ producer_ranks, /* tag = */ 0, &intercomm_);
+                producer_intercomms.push_back(communicator(intercomm_));
+                producer_comm = local;
+            }
+            else
+            {
+                MPI_Intercomm_create(local, 0, world, /* remote_leader = */ 0, /* tag = */ 0, &intercomm_);
+                consumer_intercomms.push_back(communicator(intercomm_));
+                consumer_comm = local;
+            }
+        } else
         {
-            MPI_Intercomm_create(local, 0, world, /* remote_leader = */ producer_ranks, /* tag = */ 0, &intercomm_);
-            producer_intercomms.push_back(communicator(intercomm_));
+            producer = true;
+            local = world;
+            producer_intercomms.push_back(world);
             producer_comm = local;
-        }
-        else
-        {
-            MPI_Intercomm_create(local, 0, world, /* remote_leader = */ 0, /* tag = */ 0, &intercomm_);
-            consumer_intercomms.push_back(communicator(intercomm_));
-            consumer_comm = local;
         }
     }
 

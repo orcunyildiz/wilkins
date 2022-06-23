@@ -1,7 +1,9 @@
 project                     (LowFive)
 cmake_minimum_required      (VERSION 3.9)
 
-option                      (wrapped_mpi    "MPI compiler wrapper requires no further MPI libs"     OFF)
+option                      (wrapped_mpi      "MPI compiler wrapper requires no further MPI libs"     OFF)
+option                      (lowfive_python   "Build python bindings"                                 ON)
+option                      (lowfive_backward "Use backward-cpp for debugging"                        ON)
 
 # C++11
 if                          (NOT DEFINED CMAKE_CXX_STANDARD)
@@ -35,9 +37,17 @@ add_subdirectory            (ext/diy)
 set                         (libraries ${libraries} diy)
 
 # fmt
-option                      (FMT_INSTALL "" ON)
+option                      (FMT_INSTALL "" OFF)
 add_subdirectory            (ext/fmt)
 set                         (libraries ${libraries} fmt::fmt)
+
+# spdlog
+option                      (SPDLOG_FMT_EXTERNAL "" ON)
+option                      (SPDLOG_BUILD_EXAMPLE "" OFF)
+option                      (SPDLOG_BUILD_TESTS "" OFF)
+add_subdirectory            (ext/spdlog)
+set                         (libraries ${libraries} spdlog)
+include_directories         (ext/spdlog/include)
 
 # HDF5
 if                          (HDF5_LIBRARY AND HDF5_HL_LIBRARY AND Z_LIBRARY)
@@ -47,9 +57,9 @@ if                          (HDF5_LIBRARY AND HDF5_HL_LIBRARY AND Z_LIBRARY)
   set                       (HDF5_LIBRARY ${HDF5_HL_LIBRARY} ${HDF5_LIBRARY} ${Z_LIBRARY})
 else                        ()
   message                   ("Looking for HDF5")
-  if                        (NOT APPLE)
-      set                   (HDF5_USE_STATIC_LIBRARIES ON)
-  endif                     ()
+  #if                        (NOT APPLE)
+  #    set                   (HDF5_USE_STATIC_LIBRARIES ON)
+  #endif                     ()
   find_package              (HDF5 REQUIRED COMPONENTS C HL)
   message                   ("HDF5_C_LIBRARIES = " ${HDF5_C_LIBRARIES})
   message                   ("HDF5_HL_LIBRARIES = " ${HDF5_HL_LIBRARIES})
@@ -59,6 +69,11 @@ else                        ()
 endif                       ()
 #set                         (libraries ${libraries} ${HDF5_LIBRARY})
 include_directories         (SYSTEM ${HDF5_INCLUDE_DIR})
+
+if(lowfive_backward)
+# backward-cpp
+add_subdirectory(ext/backward-cpp)
+endif()
 
 # Include dirs
 set                         (CMAKE_INCLUDE_SYSTEM_FLAG_CXX "-isystem")
@@ -94,5 +109,7 @@ endforeach                  ()
 install                     (FILES ${FILES_TO_DEPLOY} DESTINATION ${CMAKE_INSTALL_PREFIX}/include)
 install                     (DIRECTORY ${DIRS_TO_DEPLOY} DESTINATION ${CMAKE_INSTALL_PREFIX}/include)
 
-add_subdirectory            (ext/pybind11)
-add_subdirectory            (bindings/python)
+if                          (lowfive_python)
+    add_subdirectory        (ext/pybind11)
+    add_subdirectory        (bindings/python)
+endif                       ()

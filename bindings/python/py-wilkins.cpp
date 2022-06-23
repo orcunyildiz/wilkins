@@ -15,8 +15,7 @@ using namespace std;
 
 #include <mpi4py/mpi4py.h>
 
-#include <diy/mpi/communicator.hpp>
-using communicator = diy::mpi::communicator;
+using communicator = MPI_Comm;
 
 template <typename To, typename From>
 To container_cast(From && from) {
@@ -28,7 +27,6 @@ To container_cast(From && from) {
 //https://stackoverflow.com/questions/49259704/pybind11-possible-to-use-mpi4py
 struct mpi4py_comm {
   mpi4py_comm() = default;
-  mpi4py_comm(MPI_Comm value) : value(value) {}
   mpi4py_comm(communicator value) : value(value) {}
   operator MPI_Comm () { return value; }
 
