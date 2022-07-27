@@ -8,4 +8,4 @@ git module yaml-cpp:
 
 git module lowfive:
     url: ssh://git@github.com/diatomic/lowfive
-    rev: 694ab213ec1c708ffd18a78075659ff79d58cf6e
+    rev: 3dc1106e80cfc1b45f90771c4bb02a5c718704ce
