@@ -70,7 +70,7 @@ public:
 
     l5::DistMetadataVOL build_lowfive(); //orc@27-10: deprecated, will delete later. Keeping it as reference for the time being.
     l5::DistMetadataVOL init();
-    void initStandalone(); //orc@21-02: added for use cases where L5 is handled outside of wilkins.
+    void wait(); //orc@06-10: consumer waits until producer issues a commit function.
     vector<MPI_Comm> build_intercomms();
     vector<int> build_intercomms(std::string task_name); //orc@05-11: used for shared mode
     //orc@14-07: used in lowfive prod for signalling that data is ready

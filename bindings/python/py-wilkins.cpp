@@ -95,7 +95,7 @@ PYBIND11_MODULE(pywilkins, m)
         .def("local_comm_rank", &Wilkins::local_comm_rank, "returns the rank within the task")
         .def("workflow_comm_size", &Wilkins::workflow_comm_size, "returns the size of the workflow")
         .def("workflow_comm_rank", &Wilkins::workflow_comm_rank, "returns the rank within the workflow")
-        .def("initStandalone", &Wilkins::initStandalone, "setups the communicators")
+        .def("wait", &Wilkins::wait, "consumer waits until the data is ready")
         .def("commit", &Wilkins::commit, "producer signals that the data is ready to use")
     ;
 

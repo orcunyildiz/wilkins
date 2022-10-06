@@ -253,25 +253,8 @@ Wilkins::init()
 
 void
 wilkins::
-Wilkins::initStandalone()
+Wilkins::wait()
 {
-
-    std::string dflowName, full_path, filename, dset;
-    std::vector<MPI_Comm> communicators;
-
-    MPI_Comm local;
-
-    //orc@26-10: if not wilkins_master, MPMD mode, creating comms ourselves
-    if (!wilkins_master())
-    {
-        communicators = this->build_intercomms();
-        local = this->local_comm_handle();
-    }
-    else
-    {
-     	communicators = wilkins_get_intercomms();
-        local = wilkins_get_local_comm();
-    }
 
     //I'm a consumer
     //orc@21-02: this is required for handshake assuming producer would finish with commit().
@@ -284,10 +267,8 @@ Wilkins::initStandalone()
             index++;
 
             //orc@13-07: wait for data to be ready for the specific intercomm
-            //orc@17-09: moving here since now we can have multiple intercomms for the same prod-con pair
-            //placing this after intercomm creation would result in a deadlock therefore
             if (pair.first->in_passthru() && !pair.first->in_metadata())
-                diy_comm(communicators[index-1]).barrier();
+                diy_comm(this->in_intercomms_[index-1]).barrier();
 
         }
 
