@@ -1,5 +1,6 @@
 add_library             (wilkins            comm.cpp
 					    context.cpp
+				            data.cpp
 				            dataflow.cpp
                                             wilkins.cpp
                                             workflow.cpp)
