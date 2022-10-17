@@ -54,6 +54,47 @@ Wilkins::Wilkins(CommHandle world_comm,
 
 }
 
+wilkins::
+Wilkins::Wilkins(CommHandle world_comm) :
+    world_comm_(world_comm)
+{
+    world = new Comm(world_comm);
+
+    workflow_size_ = CommSize(world_comm);
+    workflow_rank_ = CommRank(world_comm);
+
+    Workflow *wf;
+    wilkins::load_ptr("workflow", (void**) &wf);
+    workflow_ = *wf; //TODO: not sure whether using the same workflow object as in init will create a problem here.
+
+    // collect all dataflows
+    build_dataflows(dataflows);
+
+    // inbound dataflows
+    for (size_t i = 0; i < workflow_.links.size(); i++)
+    {
+
+     	// I am a node and this dataflow is an input
+        if (workflow_.my_in_link(workflow_rank_, i))
+        {
+            node_in_dataflows.push_back(pair<Dataflow*, int>(dataflows[i], i));
+        }
+    }
+
+     // outbound dataflows
+    for (size_t i = 0; i < workflow_.links.size(); i++)
+    {
+        // I am a node and this dataflow is an output
+        if (workflow_.my_out_link(workflow_rank_, i))
+        {
+
+            out_dataflows.push_back(dataflows[i]);
+        }
+    }
+
+}
+
+
 // destructor
 wilkins::
 Wilkins::~Wilkins()

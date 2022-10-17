@@ -18,6 +18,7 @@
 #include <wilkins/comm.hpp>
 #include <wilkins/workflow.hpp>
 #include <wilkins/context.h>
+#include <wilkins/data.hpp>
 
 //lowfive headers
 #include    "hdf5.h"
@@ -34,6 +35,7 @@ class Wilkins
 public:
     Wilkins(CommHandle world_comm,
           const string& config_file);
+    Wilkins(CommHandle world_comm); // constructor for the dynamics
     ~Wilkins();
 
     //! whether my rank belongs to this workflow node, identified by the name of its func field
