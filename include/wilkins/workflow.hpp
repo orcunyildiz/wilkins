@@ -25,6 +25,9 @@
 
 #include <string>
 
+//orc@04-01: borrowing serialization from DH for the workflow object
+#include <wilkins/serialization.hpp>
+
 using namespace std;
 struct LowFivePort
 {
@@ -95,5 +98,80 @@ struct Workflow                              /// an entire workflow
     static void
     make_wflow_from_yaml( Workflow& workflow, const string& yaml_path );
 };
+
+
+namespace wilkins
+{
+
+template<>
+struct Serialization<WorkflowNode>
+{
+    static void         save(BinaryBuffer& bb, const WorkflowNode& j)
+    {
+        wilkins::save(bb, j.start_proc);
+        wilkins::save(bb, j.nprocs);
+        wilkins::save(bb, j.func);
+        //TODO: add LowFivePort as well for l5_inports and l5_outports?
+    }
+
+    static void         load(BinaryBuffer& bb, WorkflowNode& j)
+    {
+     	wilkins::load(bb, j.start_proc);
+        wilkins::load(bb, j.nprocs);
+        wilkins::load(bb, j.func);
+    }
+};
+
+
+template<>
+struct Serialization<WorkflowLink>
+{
+    static void         save(BinaryBuffer& bb, const WorkflowLink& j)
+    {
+        wilkins::save(bb, j.prod);
+        wilkins::save(bb, j.con);
+        wilkins::save(bb, j.name);
+        wilkins::save(bb, j.fullName);
+        wilkins::save(bb, j.tokens);
+        wilkins::save(bb, j.in_passthru);
+        wilkins::save(bb, j.in_metadata);
+        wilkins::save(bb, j.out_passthru);
+        wilkins::save(bb, j.out_metadata);
+        wilkins::save(bb, j.ownership);
+    }
+
+    static void         load(BinaryBuffer& bb, WorkflowLink& j)
+    {
+     	wilkins::load(bb, j.prod);
+        wilkins::load(bb, j.con);
+        wilkins::load(bb, j.name);
+        wilkins::load(bb, j.fullName);
+        wilkins::load(bb, j.tokens);
+        wilkins::load(bb, j.in_passthru);
+        wilkins::load(bb, j.in_metadata);
+        wilkins::load(bb, j.out_passthru);
+        wilkins::load(bb, j.out_metadata);
+        wilkins::load(bb, j.ownership);
+    }
+};
+
+template<>
+struct Serialization<Workflow>
+{
+    static void         save(BinaryBuffer& bb, const Workflow& j)
+    {
+     	wilkins::save(bb, j.nodes);
+        wilkins::save(bb, j.links);
+
+    }
+
+    static void         load(BinaryBuffer& bb, Workflow& j)
+    {
+     	wilkins::load(bb, j.nodes);
+        wilkins::load(bb, j.links);
+    }
+};
+
+}
 
 #endif
