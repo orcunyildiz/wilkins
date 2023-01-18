@@ -95,8 +95,34 @@ PYBIND11_MODULE(pywilkins, m)
         .def("local_comm_rank", &Wilkins::local_comm_rank, "returns the rank within the task")
         .def("workflow_comm_size", &Wilkins::workflow_comm_size, "returns the size of the workflow")
         .def("workflow_comm_rank", &Wilkins::workflow_comm_rank, "returns the rank within the workflow")
+        .def("set_lowfive", &Wilkins::set_lowfive, "setups the L5 vol plugin properties")
         .def("wait", &Wilkins::wait, "consumer waits until the data is ready")
         .def("commit", &Wilkins::commit, "producer signals that the data is ready to use")
+    ;
+
+    py::class_<WorkflowNode>(m, "WorkflowNode")
+        .def(py::init<>())
+        .def_readwrite("start_proc", &WorkflowNode::start_proc)
+        .def_readwrite("nprocs", &WorkflowNode::nprocs)
+        .def_readwrite("func", &WorkflowNode::func)
+    ;
+
+    py::class_<Workflow>(m, "Workflow")
+        .def(py::init<>())
+        .def_readwrite("nodes", &Workflow::nodes)
+        .def("make_wflow_from_yaml", &Workflow::make_wflow_from_yaml)
+    ;
+
+    py::class_<LowFiveProperty>(m, "LowFiveProperty")
+        .def(py::init<>())
+        .def_readwrite("filename", &LowFiveProperty::filename)
+        .def_readwrite("dset", &LowFiveProperty::dset)
+        .def_readwrite("execGroup", &LowFiveProperty::execGroup)
+        .def_readwrite("zerocopy", &LowFiveProperty::zerocopy)
+        .def_readwrite("memory", &LowFiveProperty::memory)
+        .def_readwrite("producer", &LowFiveProperty::producer)
+        .def_readwrite("consumer", &LowFiveProperty::consumer)
+        .def_readwrite("index", &LowFiveProperty::index)
     ;
 
     m.def("get_local_comm", &get_local_comm, "returns the communicator of the local task.");

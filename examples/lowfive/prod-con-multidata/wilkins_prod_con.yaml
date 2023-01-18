@@ -6,11 +6,11 @@ tasks:
       - filename: outfile.h5
         dsets:
           - name: /group1/grid
-            ownership: 1
+            zerocopy: 1
             passthru: 0
             metadata: 1
           - name: /group1/particles
-            ownership: 1
+            zerocopy: 1
             passthru: 0
             metadata: 1
   - func: consumer

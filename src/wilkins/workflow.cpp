@@ -185,6 +185,7 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
 
                             LowFivePort l5_port;
                             l5_port.name      = full_path;
+                            l5_port.filename  = filename;
                             l5_port.passthru  = passthru;
                             l5_port.metadata  = metadata;
                             node.l5_inports.push_back(l5_port);
@@ -197,7 +198,7 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
                             link.in_passthru = passthru;
                             link.in_metadata = metadata;
 
-                            link.ownership = 0;
+                            link.zerocopy = 0;
                             //TODO think on how we handle the cycles
                             link.tokens = 0;
 
@@ -234,14 +235,14 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
                             LowFivePort l5_port;
 
                             //default values: o->0, p->0, m->1
-                            int ownership = 0;
+                            int zerocopy = 0;
                             int passthru  = 0;
                             int metadata  = 1;
 
                             string full_path = filename + "/" + dsets[k]["name"].as<std::string>(); //TODO: "/" could be redundant since this is specified in dset name already
 
-                            if(dsets[k]["ownership"])
-                                ownership = dsets[k]["ownership"].as<int>();
+                            if(dsets[k]["zerocopy"])
+                                zerocopy = dsets[k]["zerocopy"].as<int>();
                             if(dsets[k]["passthru"])
                                 passthru = dsets[k]["passthru"].as<int>();
                             if(dsets[k]["metadata"])
@@ -254,7 +255,8 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
                             }
 
 			    l5_port.name      = full_path;
-                            l5_port.ownership = ownership;
+                            l5_port.filename  = filename;
+                            l5_port.zerocopy  = zerocopy;
                             l5_port.passthru  = passthru;
                             l5_port.metadata  = metadata;
                             node.l5_outports.push_back(l5_port);
@@ -271,7 +273,7 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
         // linking the nodes //orc@21-03: w subgraph API, adding more linking options for fan-in and fan-out
         int size_links = workflow.links.size();
         int idx_links = workflow.links.size();
-
+        //vector<string> vec_ic;
         for ( size_t i = 0; i< size_links; i++)
         {
             string inPort;
@@ -325,11 +327,21 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
                             workflow.links[i].in_metadata = 0;
                         }
 
-                        workflow.links[i].ownership = outPort.ownership;
+                        workflow.links[i].zerocopy = outPort.zerocopy;
                         workflow.links[i].fullName = workflow.links[i].name + ":" + workflow.nodes[j].func; //orc@17-09: obtaining also prod name for the shared mode
-                        workflow.nodes.at( j ).out_links.push_back(i);
-                        workflow.nodes.at( workflow.links[i].con ).in_links.push_back(i);
-                        //fprintf(stderr, "Match for a link %s with con %d and prod %d for link %d\n", workflow.links[i].fullName.c_str(), workflow.links[i].con, j, i);
+                        //orc@05-12-22: Using execGroup to disable multiple intercomms per same prod-con pair.TODO: Need to check later how this plays out with the subgraph API.
+                        string delim = ":";
+                        string con = workflow.links[i].name.substr(workflow.links[i].name.find(delim), string::npos);
+                        workflow.links[i].execGroup =  workflow.nodes[j].func + con; //TODO: We can include filename if we need: precede w outPort.filename + ":"
+                        //fprintf(stderr, "this is execGroup name %s\n", workflow.links[i].execGroup.c_str());
+                        //NB: We disable multiple intercomm generation at wilkins source, not at the workflow layer.
+                        //if(find(vec_ic.begin(), vec_ic.end(), ic_name) ==  vec_ic.end())
+                        //{
+                            //vec_ic.push_back(ic_name);
+                            workflow.nodes.at( j ).out_links.push_back(i);
+                            workflow.nodes.at( workflow.links[i].con ).in_links.push_back(i);
+                            //fprintf(stderr, "Match for a link %s with con %d and prod %d for link %d\n", workflow.links[i].fullName.c_str(), workflow.links[i].con, j, i);
+                        //}
                     }
                     else if( match(core_out.c_str(), inPort.c_str()) && inPort.find(idx) == string::npos ) //orc@21-03: fan-in scenario
                     {
@@ -362,7 +374,7 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
                                 workflow.links[i].in_metadata = 0;
                             }
 
-                            workflow.links[i].ownership = outPort.ownership;
+                            workflow.links[i].zerocopy = outPort.zerocopy;
                             workflow.links[i].fullName = workflow.links[i].name + ":" + workflow.nodes[j].func;
                             workflow.nodes.at( j ).out_links.push_back(i);
                             workflow.nodes.at( workflow.links[i].con ).in_links.push_back(i);
@@ -375,7 +387,7 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
                             link.prod = j;
                             link.out_passthru = outPort.passthru;
                             link.out_metadata = outPort.metadata;
-                            link.ownership = outPort.ownership;
+                            link.zerocopy = outPort.zerocopy;
                             link.tokens = 0;
 
                             link.con = workflow.links[i].con;

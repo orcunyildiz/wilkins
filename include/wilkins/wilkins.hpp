@@ -26,6 +26,19 @@
 #include    <lowfive/vol-dist-metadata.hpp>
 namespace l5 = LowFive;
 
+//orc: We would need to separate whether we are producer or consumer and depending on that we are calling set zerocopy or set intercomm at wilkins.py
+struct LowFiveProperty
+{
+    string filename="*";
+    string dset="*";
+    string execGroup="";
+    int zerocopy=0;
+    int memory=1; //0:passthru 1:metadata
+    int producer=0;
+    int consumer=0;
+    int index=0;
+};
+
 namespace wilkins
 {
 
@@ -70,6 +83,7 @@ public:
 
     l5::DistMetadataVOL build_lowfive(); //orc@27-10: deprecated, will delete later. Keeping it as reference for the time being.
     l5::DistMetadataVOL init();
+    vector<LowFiveProperty> set_lowfive();
     void wait(); //orc@06-10: consumer waits until producer issues a commit function.
     vector<MPI_Comm> build_intercomms();
     vector<int> build_intercomms(std::string task_name); //orc@05-11: used for shared mode

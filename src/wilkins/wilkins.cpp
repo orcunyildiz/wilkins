@@ -133,6 +133,103 @@ Wilkins::con_comm_handle()
 }
 
 
+vector<LowFiveProperty>
+wilkins::
+Wilkins::set_lowfive()
+{
+
+    std::string dflowName, full_path, filename, dset;
+    //std::set<std::string> filenames; //orc: we can have multiple intercoms per filename. TODO: Will see about subgraph API later w wilkins.py
+
+    std::vector<LowFiveProperty> vec_l5;
+
+
+    //prod-con related vol_plugin ops: setting zerocopy and intercomm per dataset
+    //I'm a producer
+    if (!out_dataflows.empty())
+    {
+     	for (Dataflow* df : out_dataflows)
+        {
+
+            dflowName = df->name();
+            stringstream line(dflowName);
+            std::getline(line, full_path, ':');
+            stringstream line2(full_path);
+            std::getline(line2, filename, '/');
+            dset = full_path.substr(full_path.find("/") + 1);
+            LowFiveProperty l5_prop;
+            l5_prop.filename = filename;
+            l5_prop.dset = dset;
+            l5_prop.execGroup = df->execGroup();
+            l5_prop.memory = 1;
+            l5_prop.producer = 1;
+
+            // set zerocopy of dataset (default is lowfive (deep copy), zerocopy means shallow copy)
+            // filename and full path to dataset can contain '*' and '?' wild cards (ie, globs, not regexes)
+            if (df->zerocopy())
+                l5_prop.zerocopy = 1; //orc: set_zerocopy is done at wilkins.py.
+
+            if (df->out_passthru())
+                l5_prop.memory = 0;
+
+            //filenames.insert(filename);
+
+            vec_l5.emplace_back(l5_prop);
+
+            fmt::print("PRODUCER:passthru = {}, metadata = {}, zerocopy = {}, filename = {}, dset = {}\n", df->out_passthru(), df->out_metadata(), df->zerocopy(), filename, dset);
+
+         }
+    }
+
+    //I'm a consumer
+    if (!node_in_dataflows.empty())
+    {
+
+        int index = 0;
+        std::vector<string> execGroup_dataflows;
+        for (std::pair<Dataflow*, int> pair : node_in_dataflows)
+        {
+
+            dflowName = pair.first->name();
+            stringstream line(dflowName);
+            std::getline(line, full_path, ':');
+            stringstream line2(full_path);
+            std::getline(line2, filename, '/');
+            dset = full_path.substr(full_path.find("/") + 1);
+            LowFiveProperty l5_prop;
+            l5_prop.filename = filename;
+            l5_prop.dset = dset;
+            l5_prop.execGroup = pair.first->execGroup();
+            l5_prop.memory = 1;
+            l5_prop.consumer = 1;
+            l5_prop.index = index;
+
+            // set intercomms of dataset
+            // filename and full path to dataset can contain '*' and '?' wild cards (ie, globs, not regexes)
+            //vol_plugin.set_intercomm(filename, dset, 0); //orc@05-11: In TP, need to increment/set index differently, which is not supported with set_lowfive(), see init() instead.
+            //vol_plugin.set_intercomm(filename, dset, index);
+            if(std::find(execGroup_dataflows.begin(), execGroup_dataflows.end(), pair.first->execGroup()) == execGroup_dataflows.end())
+            {
+             	execGroup_dataflows.push_back(pair.first->execGroup());
+                index++; //orc@05-12: increment only if it is not the same execGroup
+            }
+
+            // set passthru/memory at dataset level
+            if (pair.first->in_passthru())
+                l5_prop.memory = 0;
+
+            vec_l5.emplace_back(l5_prop);
+
+            fmt::print("CONSUMER: passthru = {}, metadata = {}, filename = {}, dset = {}\n", pair.first->in_passthru(), pair.first->in_metadata(), filename, dset);
+
+        }
+
+    } //endif consumer
+
+    return vec_l5;
+
+}
+
 l5::DistMetadataVOL
 wilkins::
 Wilkins::init()
@@ -144,6 +241,8 @@ Wilkins::init()
     MPI_Comm local;
 
     std::set<std::string> filenames; //orc: we can have multiple intercoms per filename
+
+    std::vector<string> execGroup_dataflows;
 
     //orc@26-10: if not wilkins_master, MPMD mode, creating comms ourselves
     if (!wilkins_master())
@@ -167,7 +266,7 @@ Wilkins::init()
     l5::H5VOLProperty vol_prop(vol_plugin);
     vol_prop.apply(plist_);
 
-    //prod-con related vol_plugin ops: setting ownership and intercomm per dataset
+    //prod-con related vol_plugin ops: setting zerocopy and intercomm per dataset
     //I'm a producer
     if (!out_dataflows.empty())
     {
@@ -181,9 +280,9 @@ Wilkins::init()
             std::getline(line2, filename, '/');
             dset = full_path.substr(full_path.find("/") + 1);
 
-            // set ownership of dataset (default is user (shallow copy), lowfive means deep copy)
+            // set zerocopy of dataset (default is lowfive (deep copy), zerocopy means shallow copy)
             // filename and full path to dataset can contain '*' and '?' wild cards (ie, globs, not regexes)
-            if (!df->ownership())
+            if (!df->zerocopy())
                 vol_plugin.set_zerocopy(filename, dset);
 
             // set passthru/memory at dataset level. TODO: L5 Pattern should work for dset name as well, for now using * since dset doesn't work for passthru.
@@ -196,7 +295,7 @@ Wilkins::init()
 
             filenames.insert(filename);
 
-	    fmt::print("PRODUCER:passthru = {}, metadata = {}, ownership = {}, filename = {}, dset = {}\n", df->out_passthru(), df->out_metadata(), df->ownership(), filename, dset);
+	    fmt::print("PRODUCER:passthru = {}, metadata = {}, zerocopy = {}, filename = {}, dset = {}\n", df->out_passthru(), df->out_metadata(), df->zerocopy(), filename, dset);
 
          }
     }
@@ -221,7 +320,7 @@ Wilkins::init()
                 vol_plugin.set_intercomm(filename, dset, 0); //orc@05-11: In TP, need to increment/set index differently
             else
                 vol_plugin.set_intercomm(filename, dset, index);
-            index++;
+
 
             // set passthru/memory at dataset level TODO: L5 Pattern should work for dset name as well, for now using * since dset doesn't work for passthru.
             if (pair.first->in_passthru())
@@ -235,11 +334,20 @@ Wilkins::init()
 
             fmt::print("CONSUMER: passthru = {}, metadata = {}, filename = {}, dset = {}\n", pair.first->in_passthru(), pair.first->in_metadata(), filename, dset);
 
+            //orc@05-12: TODO: We might omit this and call wait explicitly as we do in wilkins.py now for henson examples
             //orc@13-07: wait for data to be ready for the specific intercomm
             //orc@17-09: moving here since now we can have multiple intercomms for the same prod-con pair
             //placing this after intercomm creation would result in a deadlock therefore
-            if (pair.first->in_passthru() && !pair.first->in_metadata())
-                diy_comm(communicators[index-1]).barrier();
+
+            if(std::find(execGroup_dataflows.begin(), execGroup_dataflows.end(), pair.first->execGroup()) == execGroup_dataflows.end())
+            {
+             	execGroup_dataflows.push_back(pair.first->execGroup());
+                index++; //orc@05-12: increment only if it is not the same execGroup
+
+                if (pair.first->in_passthru() && !pair.first->in_metadata())
+                    diy_comm(communicators[index-1]).barrier();
+            }
+
         }
 
     } //endif consumer
@@ -261,14 +369,19 @@ Wilkins::wait()
     if (!node_in_dataflows.empty())
     {
         int index = 0;
+        std::vector<string> execGroup_dataflows;
         for (std::pair<Dataflow*, int> pair : node_in_dataflows)
         {
+            //orc@05-12: adding this check after disabling multiple intercomms per execGroup
+            if(std::find(execGroup_dataflows.begin(), execGroup_dataflows.end(), pair.first->execGroup()) == execGroup_dataflows.end())
+            {
+                execGroup_dataflows.push_back(pair.first->execGroup());
+                index++; //orc@05-12: don't increment if you are in the same execGroup
 
-            index++;
-
-            //orc@13-07: wait for data to be ready for the specific intercomm
-            if (pair.first->in_passthru() && !pair.first->in_metadata())
-                diy_comm(this->in_intercomms_[index-1]).barrier();
+                //orc@13-07: wait for data to be ready for the specific intercomm
+                if (pair.first->in_passthru() && !pair.first->in_metadata())
+                    diy_comm(this->in_intercomms_[index-1]).barrier();
+            }
 
         }
 
@@ -347,6 +460,8 @@ Wilkins::build_intercomms()
     MPI_Comm_dup(local_orig, &local);
 
     std::vector<std::string> shared_dataflows;
+    std::vector<std::string> execGroup_dataflows;
+
     //I'm a producer
     if (!out_dataflows.empty())
     {
@@ -365,12 +480,18 @@ Wilkins::build_intercomms()
             else
             {
 
-                MPI_Comm intercomm_;
-                int remote_leader = df->sizes()->con_start;
-                MPI_Intercomm_create(local, 0, world_comm_, remote_leader,  0, &intercomm_);
-                //intercomm = MPI_Comm(intercomm_);
-                communicators.push_back(intercomm_);
-                out_communicators.push_back(intercomm_);
+                //TODO: orc@05-12: Multiple intercomms have not been disabled for TP mode.
+                //I can do the same check as above for shared_dataflows for the same prod-con pair to disable multiple intercomms.
+                //Then, we would need to adjust the indexing accordingly in init. Q: should this include filename info as well in terms of sync.
+                if(std::find(execGroup_dataflows.begin(), execGroup_dataflows.end(), df->execGroup()) == execGroup_dataflows.end())
+                {
+                    execGroup_dataflows.push_back(df->execGroup());
+                    MPI_Comm intercomm_;
+                    int remote_leader = df->sizes()->con_start;
+                    MPI_Intercomm_create(local, 0, world_comm_, remote_leader,  0, &intercomm_);
+                    communicators.push_back(intercomm_);
+                    out_communicators.push_back(intercomm_);
+                }
             }
 
         }
@@ -396,12 +517,17 @@ Wilkins::build_intercomms()
             }
             else
             {
-                MPI_Comm intercomm_;
-                int remote_leader = pair.first->sizes()->prod_start;
-                MPI_Intercomm_create(local, 0, world_comm_, remote_leader,  0, &intercomm_);
-                //intercomm = MPI_Comm(intercomm_);
-                communicators.push_back(intercomm_);
-                in_communicators.push_back(intercomm_);
+
+                if(std::find(execGroup_dataflows.begin(), execGroup_dataflows.end(), pair.first->execGroup()) == execGroup_dataflows.end())
+                {
+                    execGroup_dataflows.push_back(pair.first->execGroup());
+                    MPI_Comm intercomm_;
+                    int remote_leader = pair.first->sizes()->prod_start;
+                    MPI_Intercomm_create(local, 0, world_comm_, remote_leader,  0, &intercomm_);
+                    //intercomm = MPI_Comm(intercomm_);
+                    communicators.push_back(intercomm_);
+                    in_communicators.push_back(intercomm_);
+                }
             }
 
         }
@@ -426,7 +552,7 @@ Wilkins::build_lowfive()
     bool shared = false;
     int passthru = 0; //orc@13-07: this should be also for each prod-con pair
     int metadata = 1; //orc@13-07: this should be also for each prod-con pair
-    int ownership = 0;
+    int zerocopy = 0;
     std::vector<MPI_Comm> communicators, out_communicators, in_communicators;
     MPI_Comm intercomm, intercomm_, local;
     local = this->local_comm_handle();
@@ -440,7 +566,7 @@ Wilkins::build_lowfive()
         {
 	    passthru = df->out_passthru();
             metadata = df->out_metadata();
-            ownership = df->ownership();
+            zerocopy = df->zerocopy();
 
             //TODO: first set of string ops are only for debugging, delete later.
             dflowName = df->name();
@@ -458,7 +584,7 @@ Wilkins::build_lowfive()
                 MPI_Intercomm_create(local, 0, world_comm_, remote_leader,  0, &intercomm_);
             }
 
-            //fmt::print("local.size() = {}, intercomm.size() = {}, passthru = {}, metadata = {}, ownership = {}, filename = {}, dset = {}\n", local.size(), intercomm.size(), passthru, metadata, ownership, filename, dset);
+            //fmt::print("local.size() = {}, intercomm.size() = {}, passthru = {}, metadata = {}, zerocopy = {}, filename = {}, dset = {}\n", local.size(), intercomm.size(), passthru, metadata, zerocopy, filename, dset);
 
             communicators.push_back(intercomm_);
             out_communicators.push_back(intercomm_);
@@ -517,7 +643,7 @@ Wilkins::build_lowfive()
     l5::H5VOLProperty vol_prop(vol_plugin);
     vol_prop.apply(plist_);
 
-    //prod-con related vol_plugin ops: setting ownership and intercomm per dataset
+    //prod-con related vol_plugin ops: setting zerocopy and intercomm per dataset
     //I'm a producer
     if (!out_dataflows.empty())
     {
@@ -531,9 +657,9 @@ Wilkins::build_lowfive()
             std::getline(line2, filename, '/');
             dset = full_path.substr(full_path.find("/") + 1);
 
-            // set ownership of dataset (default is user (shallow copy), lowfive means deep copy)
+            // set zerocopy of dataset (default is user (shallow copy), lowfive means deep copy)
             // filename and full path to dataset can contain '*' and '?' wild cards (ie, globs, not regexes)
-            if (!df->ownership())
+            if (!df->zerocopy())
                 vol_plugin.set_zerocopy(filename, dset);
 
          }
@@ -601,6 +727,8 @@ Wilkins::commit()
 
     std::vector<MPI_Comm> intercomms;
 
+    std::vector<string> execGroup_dataflows;
+
     if (!wilkins_master())
         intercomms = this->out_intercomms_;
     else
@@ -609,10 +737,17 @@ Wilkins::commit()
     int i = 0;
     for (Dataflow* df : out_dataflows)
     {
-        if (df->out_passthru() && !df->out_metadata())
-                diy_comm(intercomms[i]).barrier();
 
-        i++;
+            //orc@05-12: adding this check after disabling multiple intercomms per execGroup.
+            if(std::find(execGroup_dataflows.begin(), execGroup_dataflows.end(), df->execGroup()) == execGroup_dataflows.end())
+            {
+                execGroup_dataflows.push_back(df->execGroup());
+
+                if (df->out_passthru() && !df->out_metadata())
+                    diy_comm(intercomms[i]).barrier();
+
+                i++;
+            }
     }
 
 }

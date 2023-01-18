@@ -29,7 +29,8 @@ using namespace std;
 struct LowFivePort
 {
     string name;
-    int ownership;
+    string filename;
+    int zerocopy;
     int passthru;
     int metadata;
 };
@@ -67,13 +68,14 @@ struct WorkflowLink                          /// a dataflow
     int con;                        // index in vector of all workflow nodes of consumer
     string name;                    ///< name of the link. Should be unique in the workflow
     string fullName;                ///< name of the link, which also includes source/producer.
+    string execGroup;               ///< name of the execution group used to prevent multiple intercomms within this execGroup. Should be unique in the workflow
 
     int tokens;                     ///< number of empty messages to receive on destPort before a real get (for supporting cycles)
     int in_passthru;		    ///< "lowfive-con: write file to disk"
     int in_metadata;                ///< "lowfive-con: build and use in-memory metadata"
     int out_passthru;               ///< "lowfive-prod: write file to disk"
     int out_metadata;               ///< "lowfive-prod: build and use in-memory metadata"
-    int ownership;                  // lowfive: set ownership of dataset (default (0) is user (shallow copy), 1 means deep copy)
+    int zerocopy;                  // lowfive: set zerocopy of dataset (default (0) is lowfive (deep copy), 1 means shallow copy)
 
 };
 

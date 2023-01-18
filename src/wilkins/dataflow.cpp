@@ -9,6 +9,13 @@ Dataflow::name()
 
 string
 wilkins::
+Dataflow::execGroup()
+{
+    return execGroup_;
+}
+
+string
+wilkins::
 Dataflow::fullName()
 {
     return fullName_;
@@ -44,9 +51,9 @@ Dataflow::out_metadata()
 
 int
 wilkins::
-Dataflow::ownership()
+Dataflow::zerocopy()
 {
-    return ownership_;
+    return zerocopy_;
 }
 
 WilkinsSizes*
@@ -122,7 +129,7 @@ Dataflow::Dataflow(CommHandle world_comm,
     in_metadata_(1),
     out_passthru_(0),
     out_metadata_(1),
-    ownership_(0)
+    zerocopy_(0)
 {
 
     // ensure sizes and starts fit in the world
@@ -139,10 +146,11 @@ Dataflow::Dataflow(CommHandle world_comm,
     in_metadata_ = wflowLink.in_metadata;
     out_passthru_ = wflowLink.out_passthru;
     out_metadata_ = wflowLink.out_metadata;
-    ownership_ = wflowLink.ownership;
+    zerocopy_ = wflowLink.zerocopy;
 
     name_ = wflowLink.name;
     fullName_ = wflowLink.fullName;
+    execGroup_ = wflowLink.execGroup;
 
     // communicator creation -- only applies to MPMD mode for the user codes
     if (!wilkins_master())
