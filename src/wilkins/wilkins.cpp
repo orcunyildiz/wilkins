@@ -90,12 +90,14 @@ wilkins::
 Wilkins::build_dataflows(vector<Dataflow*>& dataflows)
 {
     WilkinsSizes wilkins_sizes;
+    io_proc_ =  1;
     for (size_t i = 0; i < workflow_.links.size(); i++)
     {
         int prod  = workflow_.links[i].prod;    // index into workflow nodes
         int dflow = i;                          // index into workflow links
         int con   = workflow_.links[i].con;     // index into workflow nodes
         wilkins_sizes.prod_size           = workflow_.nodes[prod].nprocs;
+        wilkins_sizes.prod_writers        = workflow_.nodes[prod].nwriters;
         wilkins_sizes.con_size            = workflow_.nodes[con].nprocs;
         wilkins_sizes.prod_start          = workflow_.nodes[prod].start_proc;
         wilkins_sizes.con_start           = workflow_.nodes[con].start_proc;
@@ -103,11 +105,13 @@ Wilkins::build_dataflows(vector<Dataflow*>& dataflows)
         dataflows.push_back(new Dataflow(world_comm_,
                                          workflow_size_,
                                          workflow_rank_,
+                                         io_proc_,
                                          wilkins_sizes,
                                          prod,
                                          dflow,
                                          con,
                                          workflow_.links[i]));
+
 
     }
 }
@@ -456,6 +460,7 @@ Wilkins::build_intercomms()
     MPI_Comm intercomm, local_orig;
     //local_orig = MPI_Comm(this->local_comm_handle());
     local_orig = this->local_comm_handle();
+
     MPI_Comm local;
     MPI_Comm_dup(local_orig, &local);
 
@@ -467,6 +472,7 @@ Wilkins::build_intercomms()
     {
         for (Dataflow* df : out_dataflows)
         {
+
             if (df->sizes()->con_start == df->sizes()->prod_start)
             {
                 if(std::find(shared_dataflows.begin(), shared_dataflows.end(), df->name()) == shared_dataflows.end())
@@ -750,6 +756,13 @@ Wilkins::commit()
             }
     }
 
+}
+
+int
+wilkins::
+Wilkins::is_io_proc()
+{
+    return this->io_proc_;
 }
 
 int

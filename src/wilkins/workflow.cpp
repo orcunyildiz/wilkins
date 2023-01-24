@@ -134,6 +134,9 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
                 node.l5_outports.clear();
 
                 node.nprocs = nodes[i]["nprocs"].as<int>();
+                node.nwriters = -1;
+                if(nodes[i]["nwriters"])
+                    node.nwriters = nodes[i]["nwriters"].as<int>();
                 node.func =  nodes[i]["func"].as<std::string>();
                 if (taskCount > 1) node.func +=  "_" + to_string(index);
                 //node.start_proc = nodes[i]["start_proc"].as<int>(); //orc@10-03: omitting start_proc, and calculating it ourselves instead

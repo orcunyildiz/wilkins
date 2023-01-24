@@ -33,6 +33,7 @@ public:
     Dataflow(CommHandle world_comm,             ///<  world communicator
              int workflow_size,                 ///<  size of the workflow
              int workflow_rank,                 ///<  rank in the workflow
+             int& io_proc,
              WilkinsSizes& wilkins_sizes,           ///<  sizes of producer, dataflow, consumer
              int prod,                          ///<  id in workflow structure of producer node
              int dflow,                         ///<  id in workflow structure of dataflow link

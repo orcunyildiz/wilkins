@@ -26,6 +26,7 @@ typedef unsigned char CommTypeWilkins;
 struct WilkinsSizes
 {
 	int prod_size;         // size (number of processes) of producer communicator
+        int prod_writers;      // (optional) size (number of processes) of writers in producer
 	int con_size;          // size (number of processes) of consumer communicator
 	int prod_start;        // starting world process rank of producer communicator
 	int con_start;         // starting world process rank of consumer communicator

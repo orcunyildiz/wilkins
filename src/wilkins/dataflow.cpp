@@ -92,7 +92,6 @@ Dataflow::is_con_root()
     return world_rank_ == sizes_.con_start;
 }
 
-
 CommHandle
 wilkins::
 Dataflow::prod_comm_handle()
@@ -111,6 +110,7 @@ wilkins::
 Dataflow::Dataflow(CommHandle world_comm,
                    int workflow_size,
                    int workflow_rank,
+                   int& io_proc,
                    WilkinsSizes& wilkins_sizes,
                    int prod,
                    int dflow,
@@ -159,7 +159,14 @@ Dataflow::Dataflow(CommHandle world_comm,
                 world_rank_ < sizes_.prod_start + sizes_.prod_size)
         {
             type_ |= WILKINS_PRODUCER_COMM;
-            prod_comm_ = new Comm(world_comm, sizes_.prod_start, sizes_.prod_start + sizes_.prod_size - 1);
+            //orc@24-01: supporting subset of writers for prod
+            if(sizes_.prod_writers==-1)
+                prod_comm_ = new Comm(world_comm, sizes_.prod_start, sizes_.prod_start + sizes_.prod_size - 1);
+            else if(world_rank_ < sizes_.prod_start + sizes_.prod_writers)
+                prod_comm_ =  new Comm(world_comm, sizes_.prod_start, sizes_.prod_start + sizes_.prod_writers - 1);
+            else
+                io_proc = 0; //used by wilkins.py to determine which procs should join L5 ops
+
         }
 
         if (world_rank_ >= sizes_.con_start &&                    // consumer
