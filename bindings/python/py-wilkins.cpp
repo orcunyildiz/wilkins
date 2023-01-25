@@ -106,6 +106,7 @@ PYBIND11_MODULE(pywilkins, m)
         .def_readwrite("start_proc", &WorkflowNode::start_proc)
         .def_readwrite("nprocs", &WorkflowNode::nprocs)
         .def_readwrite("func", &WorkflowNode::func)
+        .def_readwrite("args", &WorkflowNode::args)
     ;
 
     py::class_<Workflow>(m, "Workflow")

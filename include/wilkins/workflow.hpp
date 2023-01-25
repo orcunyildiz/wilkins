@@ -44,15 +44,14 @@ struct WorkflowNode                          /// a producer or consumer
         start_proc(start_proc_),
         nprocs(nprocs_),
         func(func_),
-        nwriters(-1),
-        args(NULL){}
+        nwriters(-1){}
     vector<int> out_links;      ///< indices of outgoing links
     vector<int> in_links;       ///< indices of incoming links
     int start_proc;             ///< starting processor rank (root) in world communicator for this producer or consumer
     int nprocs;                 ///< number of processes for this node (producer or consumer)
     int nwriters;               ///< (optional) number of writer processes for producer
     string func;                ///< name of node callback
-    void* args;                 ///< callback arguments
+    vector<string> args;        ///< (optional) task arguments
     //vector<string> inports;     ///< input ports, if available //orc@08-12: deprecated, using l5_inports instead
     //vector<string> outports;    ///< output ports, if available //orc@08-12: deprecated, using l5_outports instead
     vector<LowFivePort> l5_inports;     ///< input ports, if available
