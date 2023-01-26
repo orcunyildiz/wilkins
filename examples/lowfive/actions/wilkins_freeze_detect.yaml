@@ -1,0 +1,21 @@
+tasks:
+  - func: freeze-henson
+    nprocs: 3
+    nwriters: 1
+    args: ["in.watbox", "3"]
+    actions: ["actions", "callback"]
+    outports:
+      - filename: dump_h5md.h5
+        dsets:
+          - name: /particles/all/position/value
+            passthru: 0
+            metadata: 1
+  - func: detector-henson
+    nprocs: 1
+    args: ["3"]
+    inports:
+      - filename: dump_h5md.h5
+        dsets:
+          - name: /particles/all/position/value
+            passthru: 0
+            metadata: 1

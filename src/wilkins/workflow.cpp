@@ -140,6 +140,8 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
                 node.func =  nodes[i]["func"].as<std::string>();
                 if(nodes[i]["args"])
                     node.args = nodes[i]["args"].as<std::vector<std::string>>();
+                if(nodes[i]["actions"])
+                    node.actions = nodes[i]["actions"].as<std::vector<std::string>>();
 
                 if (taskCount > 1) node.func +=  "_" + to_string(index);
                 //node.start_proc = nodes[i]["start_proc"].as<int>(); //orc@10-03: omitting start_proc, and calculating it ourselves instead

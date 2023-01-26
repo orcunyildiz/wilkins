@@ -95,10 +95,6 @@ private:
     // builds a vector of dataflows for all links in the workflow
     void build_dataflows(vector<Dataflow*>& dataflows);
 
-    // return index in my_nodes_ of workflow node id
-    // -1: not found
-    int my_node(int workflow_id);
-
     // data members
     CommHandle world_comm_;                     // handle to original world communicator
     int workflow_size_;                         // Size of the workflow
