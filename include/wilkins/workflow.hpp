@@ -52,7 +52,9 @@ struct WorkflowNode                          /// a producer or consumer
     int nwriters;               ///< (optional) number of writer processes for producer
     string func;                ///< name of node callback
     vector<string> args;        ///< (optional) task arguments
-    vector<string> actions;        ///< (optional) task actions
+    vector<string> actions;     ///< (optional) task actions
+    int io_freq;             ///< (optional) task io freq for flow control
+
     //vector<string> inports;     ///< input ports, if available //orc@08-12: deprecated, using l5_inports instead
     //vector<string> outports;    ///< output ports, if available //orc@08-12: deprecated, using l5_outports instead
     vector<LowFivePort> l5_inports;     ///< input ports, if available

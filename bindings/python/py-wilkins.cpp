@@ -109,6 +109,7 @@ PYBIND11_MODULE(pywilkins, m)
         .def_readwrite("func", &WorkflowNode::func)
         .def_readwrite("args", &WorkflowNode::args)
         .def_readwrite("actions", &WorkflowNode::actions)
+        .def_readwrite("io_freq", &WorkflowNode::io_freq)
     ;
 
     py::class_<Workflow>(m, "Workflow")

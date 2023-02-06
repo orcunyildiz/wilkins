@@ -143,6 +143,23 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
                 if(nodes[i]["actions"])
                     node.actions = nodes[i]["actions"].as<std::vector<std::string>>();
 
+                node.io_freq = 1;
+                if(nodes[i]["io_freq"])
+                {
+                    try{
+                        node.io_freq = nodes[i]["io_freq"].as<int>();
+                    }
+                    catch (const std::exception& e) {
+                        string flow_policy = nodes[i]["io_freq"].as<std::string>();
+                        if(flow_policy=="latest")
+                            node.io_freq = -1;
+                        else{
+                            fprintf(stderr, "ERROR: %s -- Not supported flow control policy\n", flow_policy.c_str());
+                            exit(1);
+                        }
+                    }
+                }
+
                 if (taskCount > 1) node.func +=  "_" + to_string(index);
                 //node.start_proc = nodes[i]["start_proc"].as<int>(); //orc@10-03: omitting start_proc, and calculating it ourselves instead
                 node.start_proc = startProc;
@@ -317,6 +334,9 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
                     if(match(inPort.c_str(),outPort.name.c_str()) || ( match(core_in.c_str(),outPort.name.c_str()) && outPort.name.find(idx) == string::npos) )
                     {
                         workflow.links[i].prod = j;
+                        //orc@06-02: setting "latest" flow control on consumer if any:
+                        if(workflow.nodes.at( j ).io_freq==-1)
+                            workflow.nodes.at( workflow.links[i].con ).io_freq = 0;
                         workflow.links[i].out_passthru = outPort.passthru;
                         workflow.links[i].out_metadata = outPort.metadata;
 
@@ -364,6 +384,10 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
                             workflow.links[i].name = preDlm_link + "_" + to_string(file_range[fanin_cnt-1]) + postDlm_link;
 
                      	    workflow.links[i].prod = j;
+                            //orc@06-02: setting "latest" flow control on consumer if any:
+                            if(workflow.nodes.at( j ).io_freq==-1)
+                                workflow.nodes.at( workflow.links[i].con ).io_freq = 0;
+
                             workflow.links[i].out_passthru = outPort.passthru;
                             workflow.links[i].out_metadata = outPort.metadata;
 
