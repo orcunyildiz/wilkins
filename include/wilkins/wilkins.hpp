@@ -37,6 +37,7 @@ struct LowFiveProperty
     int producer=0;
     int consumer=0;
     int index=0;
+    int flowPolicy=1;
 };
 
 namespace wilkins

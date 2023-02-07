@@ -109,7 +109,6 @@ PYBIND11_MODULE(pywilkins, m)
         .def_readwrite("func", &WorkflowNode::func)
         .def_readwrite("args", &WorkflowNode::args)
         .def_readwrite("actions", &WorkflowNode::actions)
-        .def_readwrite("io_freq", &WorkflowNode::io_freq)
     ;
 
     py::class_<Workflow>(m, "Workflow")
@@ -128,6 +127,7 @@ PYBIND11_MODULE(pywilkins, m)
         .def_readwrite("producer", &LowFiveProperty::producer)
         .def_readwrite("consumer", &LowFiveProperty::consumer)
         .def_readwrite("index", &LowFiveProperty::index)
+        .def_readwrite("flowPolicy", &LowFiveProperty::flowPolicy)
     ;
 
     m.def("get_local_comm", &get_local_comm, "returns the communicator of the local task.");

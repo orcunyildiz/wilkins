@@ -58,6 +58,7 @@ public:
     int out_passthru();
     int out_metadata();
 
+    int flowPolicy();
     int zerocopy();
     string name();
     string execGroup();
@@ -83,7 +84,7 @@ private:
     int out_passthru_;                   // lowfive-prod: write to file
     int out_metadata_;                   // lowfive-prod: build and use in-memory metadata
     int zerocopy_;                  // lowfive: set zerocopy of dataset (default (0) is lowfive (deep copy), 1 means shallow copy)
-
+    int flowPolicy_;
     string name_;                    //name of the link, used in enforcing zerocopy (prod) or setting intercomm for dsets (con)
     string fullName_;                //name of the link with the source/producer of the link, used for differentiating links where the rank info is not sufficient (shared mode)
     string execGroup_;                //name of the execution group used to prevent multiple intercomm creation within this execution group.

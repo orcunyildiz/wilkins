@@ -53,7 +53,6 @@ struct WorkflowNode                          /// a producer or consumer
     string func;                ///< name of node callback
     vector<string> args;        ///< (optional) task arguments
     vector<string> actions;     ///< (optional) task actions
-    int io_freq;             ///< (optional) task io freq for flow control
 
     //vector<string> inports;     ///< input ports, if available //orc@08-12: deprecated, using l5_inports instead
     //vector<string> outports;    ///< output ports, if available //orc@08-12: deprecated, using l5_outports instead
@@ -74,6 +73,7 @@ struct WorkflowLink                          /// a dataflow
     string fullName;                ///< name of the link, which also includes source/producer.
     string execGroup;               ///< name of the execution group used to prevent multiple intercomms within this execGroup. Should be unique in the workflow
 
+    int flow_policy;                ///< (optional) policy (io freq) for flow control
     int tokens;                     ///< number of empty messages to receive on destPort before a real get (for supporting cycles)
     int in_passthru;		    ///< "lowfive-con: write file to disk"
     int in_metadata;                ///< "lowfive-con: build and use in-memory metadata"

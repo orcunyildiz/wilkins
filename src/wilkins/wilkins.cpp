@@ -168,6 +168,7 @@ Wilkins::set_lowfive()
             l5_prop.memory = 1;
             l5_prop.producer = 1;
 
+            l5_prop.flowPolicy = df->flowPolicy();
             // set zerocopy of dataset (default is lowfive (deep copy), zerocopy means shallow copy)
             // filename and full path to dataset can contain '*' and '?' wild cards (ie, globs, not regexes)
             if (df->zerocopy())
@@ -207,6 +208,7 @@ Wilkins::set_lowfive()
             l5_prop.memory = 1;
             l5_prop.consumer = 1;
             l5_prop.index = index;
+            l5_prop.flowPolicy = pair.first->flowPolicy();
 
             // set intercomms of dataset
             // filename and full path to dataset can contain '*' and '?' wild cards (ie, globs, not regexes)

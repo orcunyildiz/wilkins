@@ -14,6 +14,13 @@ Dataflow::execGroup()
     return execGroup_;
 }
 
+int
+wilkins::
+Dataflow::flowPolicy()
+{
+    return flowPolicy_;
+}
+
 string
 wilkins::
 Dataflow::fullName()
@@ -147,6 +154,7 @@ Dataflow::Dataflow(CommHandle world_comm,
     out_passthru_ = wflowLink.out_passthru;
     out_metadata_ = wflowLink.out_metadata;
     zerocopy_ = wflowLink.zerocopy;
+    flowPolicy_ = wflowLink.flow_policy;
 
     name_ = wflowLink.name;
     fullName_ = wflowLink.fullName;
