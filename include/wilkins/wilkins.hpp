@@ -36,7 +36,8 @@ struct LowFiveProperty
     int memory=1; //0:passthru 1:metadata
     int producer=0;
     int consumer=0;
-    int index=0;
+    int prodIndex=0; // used for handling multiple flow control policies on the producer
+    int conIndex=0; // used for setting intercomms on the consumer
     int flowPolicy=1;
 };
 

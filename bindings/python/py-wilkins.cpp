@@ -126,7 +126,8 @@ PYBIND11_MODULE(pywilkins, m)
         .def_readwrite("memory", &LowFiveProperty::memory)
         .def_readwrite("producer", &LowFiveProperty::producer)
         .def_readwrite("consumer", &LowFiveProperty::consumer)
-        .def_readwrite("index", &LowFiveProperty::index)
+        .def_readwrite("prodIndex", &LowFiveProperty::prodIndex)
+        .def_readwrite("conIndex", &LowFiveProperty::conIndex)
         .def_readwrite("flowPolicy", &LowFiveProperty::flowPolicy)
     ;
 

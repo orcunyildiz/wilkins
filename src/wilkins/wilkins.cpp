@@ -152,6 +152,8 @@ Wilkins::set_lowfive()
     //I'm a producer
     if (!out_dataflows.empty())
     {
+     	int index = 0;
+        std::vector<string> execGroup_dataflows;
      	for (Dataflow* df : out_dataflows)
         {
 
@@ -167,8 +169,16 @@ Wilkins::set_lowfive()
             l5_prop.execGroup = df->execGroup();
             l5_prop.memory = 1;
             l5_prop.producer = 1;
+            l5_prop.prodIndex = index;
 
             l5_prop.flowPolicy = df->flowPolicy();
+
+            if(std::find(execGroup_dataflows.begin(), execGroup_dataflows.end(), df->execGroup()) == execGroup_dataflows.end())
+            {
+             	execGroup_dataflows.push_back(df->execGroup());
+                index++; //orc@05-12: increment only if it is not the same execGroup
+            }
+
             // set zerocopy of dataset (default is lowfive (deep copy), zerocopy means shallow copy)
             // filename and full path to dataset can contain '*' and '?' wild cards (ie, globs, not regexes)
             if (df->zerocopy())
@@ -207,7 +217,7 @@ Wilkins::set_lowfive()
             l5_prop.execGroup = pair.first->execGroup();
             l5_prop.memory = 1;
             l5_prop.consumer = 1;
-            l5_prop.index = index;
+            l5_prop.conIndex = index;
             l5_prop.flowPolicy = pair.first->flowPolicy();
 
             // set intercomms of dataset
