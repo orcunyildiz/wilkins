@@ -44,6 +44,22 @@ if                          (lowfive)
   include_directories         (${HDF5_INCLUDE_DIR})
 endif                       (lowfive)
 
+#henson
+if                          (HENSON_LIBRARY AND HENSON_PMPI_LIBRARY)
+  message                  ("HENSON_LIBRARY = " ${HENSON_LIBRARY})
+  message                  ("HENSON_PMPI_LIBRARY = " ${HENSON_PMPI_LIBRARY})
+  set                      (HENSON_LIBRARIES ${HENSON_PMPI_LIBRARY} ${HENSON_LIBRARY})
+else                        ()
+  message                   ("Looking for HENSON")
+  find_library              (HENSON_LIBRARY henson)
+  find_library              (HENSON_PMPI_LIBRARY henson-pmpi)
+  message                   ("HENSON_LIBRARY = " ${HENSON_LIBRARY})
+  message                   ("HENSON_PMPI_LIBRARY = " ${HENSON_PMPI_LIBRARY})
+  set                       (HENSON_LIBRARIES ${HENSON_PMPI_LIBRARY} ${HENSON_LIBRARY})
+endif                       ()
+set                         (libraries ${libraries} ${HENSON_LIBRARIES})
+include_directories         (${HENSON_INCLUDE_DIR})
+
 #YAML-cpp
 add_subdirectory            (ext/yaml-cpp)
 set                         (libraries ${libraries} yaml-cpp::yaml-cpp)
