@@ -27,7 +27,8 @@ class Wilkins(CMakePackage):
     depends_on('hdf5+mpi+hl@1.12.1 ^mpich', type='link')
     depends_on('henson@master+python+mpi-wrappers')
 
-    depends_on("py-mpi4py")
+    extends("python")
+    depends_on("py-mpi4py", type=("build", "run"))
 
     def cmake_args(self):
         args = ['-DCMAKE_C_COMPILER=%s' % self.spec['mpi'].mpicc,
