@@ -10,6 +10,13 @@ if                          (MPI4Py_FOUND)
     target_include_directories  (pywilkins PUBLIC ${MPI4Py_INCLUDE_DIR} ${PROJECT_SOURCE_DIR}/include ${HDF5_INCLUDE_DIR})
 endif()
 
+list                        (APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/ext/lowfive/ext/pybind11/tools")
+find_package                (PythonLibsNew)
+string                      (REPLACE ${PYTHON_PREFIX}/ "" PYTHON_SITE_PACKAGES_RELATIVE ${PYTHON_SITE_PACKAGES})
+
+install                     (TARGETS pywilkins
+                             LIBRARY DESTINATION ${PYTHON_SITE_PACKAGES_RELATIVE})
+
 install                     (TARGETS pywilkins
                             DESTINATION ${CMAKE_INSTALL_PREFIX}/examples/python
                             PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE

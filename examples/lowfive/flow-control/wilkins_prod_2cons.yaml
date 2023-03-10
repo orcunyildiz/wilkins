@@ -1,0 +1,35 @@
+tasks:
+  - func: prod1-henson
+    nprocs: 3
+    args: ["8", "1"]
+    outports:
+      - filename: outfile.h5
+        dsets:
+          - name: /group1/grid
+            passthru: 0
+            metadata: 1
+          - name: /group1/particles
+            passthru: 0
+            metadata: 1
+  - func: con1-henson
+    nprocs: 1
+    args: ["3", "1"]
+    inports:
+      - filename: outfile.h5
+        io_freq: -1
+        dsets:
+          - name: /group1/grid
+            passthru: 0
+            metadata: 1
+  - func: con2-henson
+    nprocs: 1
+    args: ["2"]
+    inports:
+      - filename: outfile.h5
+        io_freq: 3
+        dsets:
+          - name: /group1/particles
+            passthru: 0
+            metadata: 1
+
+
