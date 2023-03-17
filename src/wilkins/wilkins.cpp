@@ -246,7 +246,7 @@ Wilkins::set_lowfive()
 
 }
 
-l5::DistMetadataVOL
+l5::DistMetadataVOL&
 wilkins::
 Wilkins::init()
 {
@@ -278,7 +278,7 @@ Wilkins::init()
     H5Pset_fapl_mpio(plist_, local, MPI_INFO_NULL);
 
     // set up lowfive
-    l5::DistMetadataVOL vol_plugin(local, communicators);
+    l5::DistMetadataVOL& vol_plugin = l5::DistMetadataVOL::create_DistMetadataVOL(local, communicators);
     l5::H5VOLProperty vol_prop(vol_plugin);
     vol_prop.apply(plist_);
 
@@ -562,7 +562,7 @@ Wilkins::build_intercomms()
 }
 
 //orc@26-10: deprecated
-l5::DistMetadataVOL
+l5::DistMetadataVOL&
 wilkins::
 Wilkins::build_lowfive()
 {
@@ -657,7 +657,7 @@ Wilkins::build_lowfive()
         H5Pset_fapl_mpio(plist_, local, MPI_INFO_NULL);
 
     // set up lowfive
-    l5::DistMetadataVOL vol_plugin(local, communicators);
+    l5::DistMetadataVOL& vol_plugin = l5::DistMetadataVOL::create_DistMetadataVOL(local, communicators);
     l5::H5VOLProperty vol_prop(vol_plugin);
     vol_prop.apply(plist_);
 

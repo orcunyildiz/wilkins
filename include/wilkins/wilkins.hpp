@@ -84,8 +84,8 @@ public:
     vector<std::string> filenames();
     int is_io_proc();
 
-    l5::DistMetadataVOL build_lowfive(); //orc@27-10: deprecated, will delete later. Keeping it as reference for the time being.
-    l5::DistMetadataVOL init();
+    l5::DistMetadataVOL& build_lowfive(); //orc@27-10: deprecated, will delete later. Keeping it as reference for the time being.
+    l5::DistMetadataVOL& init();
     vector<LowFiveProperty> set_lowfive();
     void wait(); //orc@06-10: consumer waits until producer issues a commit function.
     vector<MPI_Comm> build_intercomms();

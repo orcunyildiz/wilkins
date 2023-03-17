@@ -144,7 +144,7 @@ namespace diy
   template<class T>
   void                  load_back(BinaryBuffer& bb, T& x)           { bb.load_binary_back((char*) &x, sizeof(T)); }
 
-  //@}
+  //!@}
 
 
   namespace detail
@@ -229,6 +229,38 @@ namespace diy
       v.resize(s, U());
       if (s > 0)
         diy::load(bb, &v[0], s);
+    }
+  };
+
+  // save/load for std::vector<bool>; TODO: this is not very efficient
+  template<>
+  struct Serialization< std::vector<bool> >
+  {
+    typedef             std::vector<bool>       Vector;
+
+    static void         save(BinaryBuffer& bb, const Vector& v)
+    {
+      size_t s = v.size();
+      diy::save(bb, s);
+      if (s > 0)
+        for(size_t i = 0; i < s; ++i)
+        {
+          bool x = v[i];
+          diy::save(bb, x);
+        }
+    }
+
+    static void         load(BinaryBuffer& bb, Vector& v)
+    {
+      size_t s;
+      diy::load(bb, s);
+      v.resize(s);
+      for(size_t i = 0; i < s; ++i)
+      {
+        bool x;
+        diy::load(bb, x);
+        v[i] = x;
+      }
     }
   };
 

@@ -28,7 +28,7 @@ void producer_f (Wilkins* wilkins,
 
     fmt::print("Entered producer1\n");
 
-    l5::DistMetadataVOL vol_plugin = wilkins->init();
+    l5::DistMetadataVOL& vol_plugin = wilkins->init();
     hid_t plist = wilkins->plist();
 
 

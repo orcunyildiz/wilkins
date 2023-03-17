@@ -25,7 +25,7 @@ void consumer_f (Wilkins* wilkins,
 {
     fmt::print("Entered consumer\n");
 
-    l5::DistMetadataVOL vol_plugin = wilkins->init();
+    l5::DistMetadataVOL& vol_plugin = wilkins->init();
     hid_t plist = wilkins->plist();
 
     communicator local = wilkins->local_comm_handle();

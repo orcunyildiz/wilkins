@@ -6,9 +6,10 @@ option                      (wilkins_python            "Build Wilkins with pytho
 
 set                         (CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# C++14
-set                         (CMAKE_CXX_STANDARD        14)
-set                         (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
+# C++17
+if                          (NOT DEFINED CMAKE_CXX_STANDARD)
+    set                     (CMAKE_CXX_STANDARD 17)
+endif                       ()
 
 # Threads
 find_package                (Threads)

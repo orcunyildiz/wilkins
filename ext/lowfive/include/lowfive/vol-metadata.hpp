@@ -3,11 +3,12 @@
 
 #include    <vector>
 #include    <string>
+#include    <map>
 #include    <unordered_set>
+#include    <functional>
 
 #include    <fmt/core.h>
 #include    "vol-base.hpp"
-#include    "metadata.hpp"
 
 namespace LowFive
 {
@@ -18,6 +19,9 @@ struct LocationPattern
     std::string         pattern;
 };
 
+struct Object;              // forward declaration for Files
+struct ObjectPointers;      // forward declaration for wrap
+
 // custom VOL object
 // only need to specialize those functions that are custom
 
@@ -25,34 +29,12 @@ struct MetadataVOL: public LowFive::VOLBase
 {
     using VOLBase::VOLBase;
 
-    using File              = LowFive::File;
-    using Object            = LowFive::Object;
-    using Dataset           = LowFive::Dataset;
-    using Dataspace         = LowFive::Dataspace;
-    using Group             = LowFive::Group;
-
     using Files             = std::map<std::string, Object*>;       // Object*, to support both File and RemoteFile
     using LocationPatterns  = std::vector<LocationPattern>;
 
-    struct ObjectPointers
-    {
-        void*           h5_obj = nullptr;             // HDF5 object (e.g., dset)
-        void*           mdata_obj = nullptr;          // metadata object (tree node)
-        bool            tmp = false;
-
-        ObjectPointers() = default;
-        ObjectPointers(void* h5_obj_): h5_obj(h5_obj_)     {}
-
-        friend
-        std::ostream&   operator<<(std::ostream& out, const ObjectPointers& obj)
-        {
-            fmt::print(out, "[{}: h5 = {}, mdata = {}, tmp = {}", fmt::ptr(&obj), fmt::ptr(obj.h5_obj), fmt::ptr(obj.mdata_obj), obj.tmp);
-            if (obj.mdata_obj)
-                fmt::print(out, ", name = {}", static_cast<Object*>(obj.mdata_obj)->name);
-            fmt::print(out, "]");
-            return out;
-        }
-    };
+    using AfterFileClose    = std::function<void()>;
+    using BeforeFileOpen    = std::function<void()>;
+    using AfterDatasetWrite = std::function<void()>;
 
     Files                       files;
     LocationPatterns            memory;
@@ -60,79 +42,41 @@ struct MetadataVOL: public LowFive::VOLBase
     LocationPatterns            zerocopy;
     bool                        keep = false;       // whether to keep files in the metadata after they are closed
 
+    // callbacks
+    AfterFileClose              after_file_close;
+    BeforeFileOpen              before_file_open;
+    AfterDatasetWrite           after_dataset_write;
+
+    protected:
                     MetadataVOL()
                     {}
+    public:
 
-                    ~MetadataVOL()
-    {
-        for (auto& x : files)
-            delete x.second;
-    }
+                    ~MetadataVOL() override;
+
+                    // prohibit copy and move
+                    MetadataVOL(const MetadataVOL&)=delete;
+                    MetadataVOL(MetadataVOL&&)=delete;
+
+                    MetadataVOL& operator=(const MetadataVOL&)=delete;
+                    MetadataVOL& operator=(MetadataVOL&&)=delete;
+
+    static MetadataVOL&         create_MetadataVOL();
 
     //bool dont_wrap = false;
     std::unordered_set<void*>   our_objects;
     bool            ours(void* p) const     { return our_objects.find(p) != our_objects.end(); }
 
-    ObjectPointers* wrap(void* p)
-    {
-        ObjectPointers* op = new ObjectPointers;
-        op->h5_obj = p;
+    ObjectPointers* wrap(void* p);
+    void*           unwrap(void* p);
+    void            drop(void* p) override;
 
-        our_objects.insert(op);
+    void            drop(std::string filename);
 
-        return op;
-    }
-    void*           unwrap(void* p)
-    {
-        ObjectPointers* op = static_cast<ObjectPointers*>(p);
-        return op->h5_obj;
-    }
-    void            drop(void* p) override
-    {
-        our_objects.erase(p);
-        ObjectPointers* op = static_cast<ObjectPointers*>(p);
-        delete op;
-    }
-
-    void            drop(std::string filename)
-    {
-        auto it = files.find(filename);
-        delete it->second;
-        files.erase(it);
-    }
-
-    void            print_files()
-    {
-        for (auto& f : files)
-        {
-            fmt::print("--------------------------------------------------------------------------------\n");
-            fmt::print("File {}\n", f.first);
-            f.second->print(0);
-            fmt::print("--------------------------------------------------------------------------------\n");
-        }
-    }
+    void            print_files();
 
     // locate an object in the metadata of one file by its full path, which uniquely identifies one object
-    Object*         locate(std::string filename, std::string full_path) const
-    {
-        auto it = files.find(filename);
-        if (it == files.end())
-            return NULL;
-
-        return it->second->search(full_path).exact();
-    }
-
-    static H5I_type_t   get_type(Object* o)
-    {
-        if (o->type == ObjectType::File)
-            return H5I_FILE;
-        else if (o->type == ObjectType::Group)
-            return H5I_GROUP;
-        else if (o->type == ObjectType::Dataset)
-            return H5I_DATASET;
-        else
-            throw MetadataError("cannot identify object type");
-    }
+    Object*         locate(std::string filename, std::string full_path) const;
 
     // record intended ownership of a dataset
     void set_zerocopy(std::string filename, std::string pattern)
@@ -154,6 +98,23 @@ struct MetadataVOL: public LowFive::VOLBase
     {
         keep = keep_;
     }
+
+    void set_after_file_close(AfterFileClose afc)
+    {
+        after_file_close = afc;
+    }
+
+    void set_before_file_open(BeforeFileOpen bfo)
+    {
+        before_file_open = bfo;
+    }
+
+    void set_after_dataset_write(AfterDatasetWrite adw)
+    {
+        after_dataset_write = adw;
+    }
+
+    void clear_files();
 
     // ref: https://www.geeksforgeeks.org/wildcard-character-matching/
     // checks if two given strings; the first string may contain wildcard characters
@@ -239,6 +200,7 @@ struct MetadataVOL: public LowFive::VOLBase
     herr_t          link_get(void *obj, const H5VL_loc_params_t *loc_params, hid_t under_vol_id, H5VL_link_get_t get_type, hid_t dxpl_id, void **req, va_list arguments) override;
     herr_t          link_specific(void *obj, const H5VL_loc_params_t *loc_params, hid_t under_vol_id, H5VL_link_specific_t specific_type, hid_t dxpl_id, void **req, va_list arguments) override;
     herr_t          link_optional(void *obj, hid_t under_vol_id, H5VL_link_optional_t opt_type, hid_t dxpl_id, void **req, va_list arguments) override;
+    herr_t          link_iter(void *obj, va_list arguments);
 
 
     herr_t          link_create_trampoline(H5VL_link_create_type_t create_type, void *obj,
@@ -253,8 +215,8 @@ struct MetadataVOL: public LowFive::VOLBase
     herr_t          attr_specific(void *obj, const H5VL_loc_params_t *loc_params, H5VL_attr_specific_t specific_type, hid_t dxpl_id, void **req, va_list arguments) override;
     herr_t          attr_optional(void *obj, H5VL_attr_optional_t opt_type, hid_t dxpl_id, void **req, va_list arguments) override;
     herr_t          attr_close(void *attr, hid_t dxpl_id, void **req) override;
-    void            attr_exists(void *obj, va_list arguments);
-    void            attr_iter(void *obj, va_list arguments);
+    htri_t          attr_exists(Object *mdata_obj, va_list arguments);
+    herr_t          attr_iter(void *obj, va_list arguments);
 
     void *          object_open(void *obj, const H5VL_loc_params_t *loc_params, H5I_type_t *opened_type, hid_t dxpl_id, void **req) override;
     herr_t          object_copy(void *src_obj, const H5VL_loc_params_t *src_loc_params, const char *src_name, void *dst_obj, const H5VL_loc_params_t *dst_loc_params, const char *dst_name, hid_t ocpypl_id, hid_t lcpl_id, hid_t dxpl_id, void **req) override;

@@ -72,8 +72,23 @@ struct VOLBase
     static H5VL_class_t     connector;      // need this static for H5PL_* functions (for automatic plugin loading via environment variables)
     static hid_t            connector_id;   // static only because of term()
 
+                            // prohibit copy/move ctor and assignment, make
+                            // default ctor private
+    protected:
                             VOLBase();
-                            ~VOLBase();
+    public:
+                            // we delete VOL objects by delete info->vol, so we
+                            // must have virtual destructor
+                            virtual ~VOLBase();
+
+                            VOLBase(const VOLBase&) = delete;
+                            VOLBase(VOLBase&&) = delete;
+
+                            VOLBase& operator=(const VOLBase&) = delete;
+                            VOLBase& operator=(VOLBase&&) = delete;
+
+//    we do not instantiate VOLBase, so no create function
+//    static VOLBase&         create_vol_base();
 
     virtual void            drop(void* p)       {}
 
@@ -200,8 +215,8 @@ struct VOLBase
     virtual herr_t          object_get(void *obj, const H5VL_loc_params_t *loc_params, H5VL_object_get_t get_type, hid_t dxpl_id, void **req, va_list arguments);
     static herr_t          _object_specific(void *obj, const H5VL_loc_params_t *loc_params, H5VL_object_specific_t specific_type, hid_t dxpl_id, void **req, va_list arguments);
     virtual herr_t          object_specific(void *obj, const H5VL_loc_params_t *loc_params, H5VL_object_specific_t specific_type, hid_t dxpl_id, void **req, va_list arguments);
-    static herr_t          _object_optional(void *obj, int op_type, hid_t dxpl_id, void **req, va_list arguments);
-    virtual herr_t          object_optional(void *obj, int op_type, hid_t dxpl_id, void **req, va_list arguments);
+    static herr_t          _object_optional(void *obj, H5VL_object_optional_t opt_type, hid_t dxpl_id, void **req, va_list arguments);
+    virtual herr_t          object_optional(void *obj, H5VL_object_optional_t opt_type, hid_t dxpl_id, void **req, va_list arguments);
 
     //// Container/connector introspection
     static herr_t          _introspect_get_conn_cls(void *obj, H5VL_get_conn_lvl_t lvl, const H5VL_class_t **conn_cls);
@@ -231,6 +246,9 @@ struct VOLBase
     //void req_specific()             {}
     //void req_optional()             {}
     //void req_free()                 {}
+
+    static herr_t          _optional(void *obj, int op_type, hid_t dxpl_id, void **req, va_list arguments);
+    virtual herr_t          optional(void *obj, int op_type, hid_t dxpl_id, void **req, va_list arguments);
 };
 
 }

@@ -15,6 +15,8 @@ if not file and not memory:
 import lowfive
 from mpi4py import MPI
 
+lowfive.create_logger("debug")
+
 world = MPI.COMM_WORLD
 size  = world.Get_size()
 rank  = world.Get_rank()
@@ -25,7 +27,7 @@ producer = rank < producer_ranks
 local = world.Split(producer)
 intercomm = local.Create_intercomm(0, world, 0 if not producer else producer_ranks, 0)
 
-vol = lowfive.DistMetadataVOL(local, intercomm)
+vol = lowfive.create_DistMetadataVOL(local, intercomm)
 if file:
     vol.set_passthru("*","*")
 if memory:
@@ -39,8 +41,9 @@ if memory:
 import numpy as np
 import h5py
 if producer:
+    print(f"Producer: {local.rank} out of {local.size}")
     with h5py.File("out.h5", "w") as f:
-        f.create_dataset("data", data=np.ones((4, 3, 2), 'f'))
+        f.create_dataset(f"data{local.rank}", data=np.ones((4, 3, 2), 'f'))
         vol.print_files()
 
     if file:
@@ -49,6 +52,7 @@ else:
     if file:
         intercomm.Barrier()
 
+    print(f"Consumer: {local.rank} out of {local.size}")
     with h5py.File("out.h5", "r") as f:
-        data = f["data"]
+        data = f[f"data{local.rank}"]
         print("Consumer:", data)
