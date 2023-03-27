@@ -16,7 +16,23 @@ find_package                (Threads)
 
 # MPI
 find_package              (MPI REQUIRED)
-set                       (libraries    ${libraries} ${MPI_C_LIBRARIES} ${MPI_CXX_LIBRARIES})
+set                       (libraries MPI::MPI_C)
+
+#henson
+if                          (HENSON_LIBRARY AND HENSON_PMPI_LIBRARY)
+  message                  ("HENSON_LIBRARY = " ${HENSON_LIBRARY})
+  message                  ("HENSON_PMPI_LIBRARY = " ${HENSON_PMPI_LIBRARY})
+  set                      (HENSON_LIBRARIES ${HENSON_PMPI_LIBRARY} ${HENSON_LIBRARY})
+else                        ()
+  message                   ("Looking for HENSON")
+  find_library              (HENSON_LIBRARY henson)
+  find_library              (HENSON_PMPI_LIBRARY henson-pmpi)
+  message                   ("found HENSON_LIBRARY = " ${HENSON_LIBRARY})
+  message                   ("found HENSON_PMPI_LIBRARY = " ${HENSON_PMPI_LIBRARY})
+  set                       (HENSON_LIBRARIES ${HENSON_PMPI_LIBRARY} ${HENSON_LIBRARY})
+endif                       ()
+set                         (libraries ${libraries} ${HENSON_LIBRARIES})
+include_directories         (${HENSON_INCLUDE_DIR})
 
 #lowfive
 if                          (lowfive)
@@ -45,31 +61,13 @@ if                          (lowfive)
   include_directories         (${HDF5_INCLUDE_DIR})
 endif                       (lowfive)
 
-#henson
-if                          (HENSON_LIBRARY AND HENSON_PMPI_LIBRARY)
-  message                  ("HENSON_LIBRARY = " ${HENSON_LIBRARY})
-  message                  ("HENSON_PMPI_LIBRARY = " ${HENSON_PMPI_LIBRARY})
-  set                      (HENSON_LIBRARIES ${HENSON_PMPI_LIBRARY} ${HENSON_LIBRARY})
-else                        ()
-  message                   ("Looking for HENSON")
-  find_library              (HENSON_LIBRARY henson)
-  find_library              (HENSON_PMPI_LIBRARY henson-pmpi)
-  message                   ("HENSON_LIBRARY = " ${HENSON_LIBRARY})
-  message                   ("HENSON_PMPI_LIBRARY = " ${HENSON_PMPI_LIBRARY})
-  set                       (HENSON_LIBRARIES ${HENSON_PMPI_LIBRARY} ${HENSON_LIBRARY})
-endif                       ()
-set                         (libraries ${libraries} ${HENSON_LIBRARIES})
-include_directories         (${HENSON_INCLUDE_DIR})
-
 #YAML-cpp
 add_subdirectory            (ext/yaml-cpp)
 set                         (libraries ${libraries} yaml-cpp::yaml-cpp)
 
 # Set include directories
 set                         (CMAKE_INCLUDE_SYSTEM_FLAG_CXX "-isystem")
-include_directories         (${CMAKE_CURRENT_BINARY_DIR}
-                             ${CMAKE_CURRENT_SOURCE_DIR}
-                             ${CMAKE_CURRENT_SOURCE_DIR}/include
+include_directories         (${CMAKE_CURRENT_SOURCE_DIR}/include
                              SYSTEM ${MPI_INCLUDE_PATH})
 
 # Set libraries
@@ -77,8 +75,6 @@ set                         (libraries
                              ${libraries}
                              ${CMAKE_THREAD_LIBS_INIT}
                              ${CMAKE_DL_LIBS})
-
-set (CMAKE_LINKER_FLAGS ${CMAKE_LINKER_FLAGS} "-Wl,--export-dynamic -dynamic")
 
 # subdirectories
 add_subdirectory            (src)

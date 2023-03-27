@@ -31,8 +31,8 @@ void producer_f (Wilkins* wilkins,
     fmt::print("Entered producer\n");
 
     communicator local = wilkins->local_comm_handle();
+    l5::DistMetadataVOL& vol_plugin = wilkins->init();
 
-    l5::DistMetadataVOL vol_plugin = wilkins->init();
     hid_t plist = wilkins->plist();
 
     //orc@15-04: obtaining filenames via wilkins instead of cmdline args
