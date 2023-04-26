@@ -1,11 +1,21 @@
 imports:
     yaml-cpp: ./ext/yaml-cpp
-    lowfive: ./ext/lowfive
+    pybind11: ./ext/pybind11
+    diy: ./ext/diy
+    fmt: ./ext/fmt
 
 git module yaml-cpp:
     url: ssh://git@github.com/jbeder/yaml-cpp.git
-    rev: 987a60425611bfd02a90bd247d630483bceaaeee
+    rev: 0e6e28d1a38224fc8172fae0109ea7f673c096db
 
-git module lowfive:
-    url: ssh://git@github.com/diatomic/lowfive
-    rev: ebf14b87857b157359981e153220c365ed257d2f
+git module pybind11:
+    url: https://github.com/pybind/pybind11
+    rev: 6de6191a0c56a9b0d31ac1c32778081a9e2b0311
+
+git module diy:
+    url: https://gitlab.kitware.com/mrzv/diy
+    rev: 3b31e3e9ab12b648cfc332cf8dffc9cc6c34c02b
+
+git module fmt:
+    url: https://github.com/fmtlib/fmt
+    rev: f8c9fabd948e4b3caea30d3c281018b0308491bf

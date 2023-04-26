@@ -108,7 +108,7 @@ io_proc = wilkins.is_io_proc()
 if io_proc==1:
     comm = w.get_local_comm(wilkins)
     intercomms = w.get_intercomms(wilkins)
-    vol = lowfive.DistMetadataVOL(comm, intercomms)
+    vol = lowfive.create_DistMetadataVOL(comm, intercomms)
     l5_props = wilkins.set_lowfive()
     execGroup         = []
     from collections import defaultdict

@@ -24,6 +24,7 @@ class Wilkins(CMakePackage):
     version('henson', branch='henson')
 
     depends_on('mpich') #TODO: keeping it mpich for now as L5 does so, but should switch to mpi later
+    depends_on('lowfive@master')
     depends_on('hdf5+mpi+hl@1.12.1 ^mpich', type='link')
     depends_on('henson@master+python+mpi-wrappers')
 

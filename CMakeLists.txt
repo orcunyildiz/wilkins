@@ -18,6 +18,17 @@ find_package                (Threads)
 find_package              (MPI REQUIRED)
 set                       (libraries MPI::MPI_C)
 
+# DIY
+option                      (build_examples "" OFF)
+option                      (build_tests "" OFF)
+add_subdirectory            (ext/diy)
+set                         (libraries ${libraries} diy)
+
+# fmt
+option                      (FMT_INSTALL "" OFF)
+add_subdirectory            (ext/fmt)
+set                         (libraries ${libraries} fmt::fmt)
+
 #henson
 if                          (HENSON_LIBRARY AND HENSON_PMPI_LIBRARY)
   message                  ("HENSON_LIBRARY = " ${HENSON_LIBRARY})
@@ -36,8 +47,20 @@ include_directories         (${HENSON_INCLUDE_DIR})
 
 #lowfive
 if                          (lowfive)
-  add_subdirectory            (ext/lowfive)
-  set                         (libraries ${libraries} lowfive lowfive-dist)
+  if                          (LOWFIVE_LIBRARY AND LOWFIVE_DIST_LIBRARY)
+    message                   ("LOWFIVE_LIBRARY = " ${LOWFIVE_LIBRARY})
+    message                   ("LOWFIVE_DIST = " ${LOWFIVE_DIST_LIBRARY})
+    set                       (LOWFIVE_LIBRARIES ${LOWFIVE_LIBRARY} ${LOWFIVE_DIST_LIBRARY})
+  else                      ()
+    message                   ("Looking for LOWFIVE")
+    find_library              (LOWFIVE_LIBRARY lowfive)
+    find_library              (LOWFIVE_DIST_LIBRARY lowfive-dist)
+    message                   ("found LOWFIVE_LIBRARY = " ${LOWFIVE_LIBRARY})
+    message                   ("found LOWFIVE_DIST = " ${LOWFIVE_DIST_LIBRARY})
+    set                       (LOWFIVE_LIBRARIES ${LOWFIVE_LIBRARY} ${LOWFIVE_DIST_LIBRARY})
+  endif                     ()
+  set                       (libraries ${libraries} ${LOWFIVE_LIBRARIES})
+  include_directories       (${LOWFIVE_INCLUDE_DIR})
 
   # HDF5
   if                          (HDF5_LIBRARY AND HDF5_HL_LIBRARY AND Z_LIBRARY)
@@ -82,5 +105,6 @@ add_subdirectory            (examples)
 
 #python bindings
 if                          (wilkins_python)
+    add_subdirectory        (ext/pybind11)
     add_subdirectory        (bindings/python)
 endif                       (wilkins_python)
