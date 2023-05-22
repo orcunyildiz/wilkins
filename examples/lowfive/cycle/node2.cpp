@@ -10,34 +10,37 @@
 #include    "prod-con-multidata.hpp"
 
 #include <diy/mpi/communicator.hpp>
-//using communicator = diy::mpi::communicator;
 using communicator = MPI_Comm;
 using diy_comm = diy::mpi::communicator;
 
-void consumer2_f (std::string prefix,
+#include <string>
+
+void node2_f (std::string prefix,
                  int threads, int mem_blocks,
                  int con_nblocks, int iters)
 {
-    fmt::print("Entered consumer2\n");
 
-    communicator local = MPI_COMM_WORLD; //orc@05-12: henson-mpi replaces the MPI_COMM_WORLD with the local comm, hence, no code changes are necessary.
+    fmt::print("Entered node2\n");
+
+    communicator local = MPI_COMM_WORLD;
     diy::mpi::communicator local_(local);
 
-
-    // --- consumer ranks running user task code ---
-    //orc@31-01: adding looping to test the flow control
+    // --- node2 ranks running user task code ---
     for (size_t i=0; i < iters; i++)
     {
-        // open the file, the dataset and the dataspace
-        hid_t file   = H5Fopen("outfile.h5", H5F_ACC_RDONLY, H5P_DEFAULT);
-        //hid_t file   = H5Fopen("outfile.h5", H5F_ACC_RDONLY, plist);
-        hid_t dset   = H5Dopen(file, "/group1/particles", H5P_DEFAULT);
-        hid_t dspace = H5Dget_space(dset);
 
-      // get global domain bounds
-        int dspace_dim = H5Sget_simple_extent_ndims(dspace);  // 2d [particle id][coordinate id]
+        //adding sleep here to emulate (2x) slow consumer
+        //sleep(10);
+
+        hid_t file        = H5Fopen("outfile1.h5", H5F_ACC_RDONLY, H5P_DEFAULT);
+
+        hid_t dset_particles   = H5Dopen(file, "/group1/particles", H5P_DEFAULT);
+        hid_t dspace_particles = H5Dget_space(dset_particles);
+
+        // get global domain bounds
+        int dspace_dim = H5Sget_simple_extent_ndims(dspace_particles);  // 2d [particle id][coordinate id]
         std::vector<hsize_t> min_(dspace_dim), max_(dspace_dim);
-        H5Sget_select_bounds(dspace, min_.data(), max_.data());
+        H5Sget_select_bounds(dspace_particles, min_.data(), max_.data());
         fmt::print(stderr, "Dataspace extent: [{}] [{}]\n", fmt::join(min_, ","), fmt::join(max_, ","));
         int dim = max_[dspace_dim - 1] + 1;                             // 3d (extent of coordinate ids)
         Bounds domain { dim };
@@ -49,7 +52,7 @@ void consumer2_f (std::string prefix,
             for (int i = 0; i < dim; ++i)
             {
                 domain.min[i] = 0;
-                domain.max[i] = con_nblocks;
+                domain.max[i] = 10; //con_nblocks;
             }
         }
         fmt::print(stderr, "Read domain: {} {}\n", domain.min, domain.max);
@@ -59,21 +62,21 @@ void consumer2_f (std::string prefix,
         size_t global_num_points;
         {
             std::vector<hsize_t> min_(1), max_(1);
-            H5Sget_select_bounds(dspace, min_.data(), max_.data());
+            H5Sget_select_bounds(dspace_particles, min_.data(), max_.data());
             global_num_points = max_[0] + 1;
         }
         fmt::print(stderr, "Global num points: {}\n", global_num_points);
 
-        // diy setup for the consumer task on the consumer side
+        // diy setup for the node2 task on the consumer side
         diy::FileStorage                con_storage(prefix);
-        diy::Master                     con_master(local,
-                threads,
-                mem_blocks,
-                &Block::create,
-                &Block::destroy,
-                &con_storage,
-                &Block::save,
-                &Block::load);
+        diy::Master                     con_master(local_,
+            threads,
+            mem_blocks,
+            &Block::create,
+            &Block::destroy,
+            &con_storage,
+            &Block::save,
+            &Block::load);
         size_t local_num_points = global_num_points / con_nblocks;
         AddBlock                        con_create(con_master, local_num_points, global_num_points, con_nblocks);
         diy::ContiguousAssigner         con_assigner(local_.size(), con_nblocks);
@@ -82,12 +85,38 @@ void consumer2_f (std::string prefix,
 
         // read the particle data
         con_master.foreach([&](Block* b, const diy::Master::ProxyWithLink& cp)
-                { b->read_block_points(cp, dset, global_num_points, con_nblocks); });
+            { b->read_block_points(cp, dset_particles, global_num_points, con_nblocks); });
 
         // clean up
-        H5Sclose(dspace);
-        H5Dclose(dset);
+        H5Sclose(dspace_particles);
+        H5Dclose(dset_particles);
         H5Fclose(file);
+        //orc@16-05: adding write to node2 for particles
+        if (i<iters-1) //orc@19-05: skipping the last iter
+        {
+            hid_t file_w = H5Fcreate("outfile2.h5", H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT); //TODO: if needed, we can add singleFile flag as in node0
+            hid_t group_w = H5Gcreate(file_w, "/group1", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+
+            std::vector<hsize_t> domain_cnts(DIM);
+            // create the file data space for the particles
+            domain_cnts[0]  = global_num_points;
+            domain_cnts[1]  = DIM;
+
+            hid_t filespace_w = H5Screate_simple(2, &domain_cnts[0], NULL);
+
+            // create the particle dataset with default properties
+            hid_t dset_w = H5Dcreate2(group_w, "particles", H5T_IEEE_F32LE, filespace_w, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+
+            // write the particle data
+            con_master.foreach([&](Block* b, const diy::Master::ProxyWithLink& cp)
+                { b->write_block_points(cp, dset_w, con_nblocks); });
+
+            // clean up
+            H5Dclose(dset_w);
+            H5Sclose(filespace_w);
+            H5Gclose(group_w);
+            H5Fclose(file_w);
+        }//skipping the last iter when writing
     }
 }
 
@@ -100,12 +129,13 @@ int main(int argc, char* argv[])
 
     diy::mpi::communicator    world;
 
-    int iters         = 1;
+    int iters         = 2;
     iters             = atoi(argv[1]);
 
-    fmt::print("Halo from Wilkins con2 with configuration for {} iters\n", iters);
+    fmt::print("Halo from node2 with looping for {} iters\n", iters);
 
     int                       global_nblocks    = world.size();   // global number of blocks
+
     int                       mem_blocks        = -1;             // all blocks in memory
     int                       threads           = 1;              // no multithreading
     std::string               prefix            = "./DIY.XXXXXX"; // for saving block files out of core
@@ -137,11 +167,11 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    // consumer will read different block decomposition than the producer
+    // node2 will read different block decomposition than the producer
     // producer also needs to know this number so it can match collective operations
     int con_nblocks = pow(2, dim) * global_nblocks;
 
-    consumer2_f(prefix, threads, mem_blocks, con_nblocks, iters);
+    node2_f(prefix, threads, mem_blocks, con_nblocks, iters);
 
     MPI_Finalize();
 }

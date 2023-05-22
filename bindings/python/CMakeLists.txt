@@ -14,7 +14,10 @@ find_package                (PythonLibsNew)
 string                      (REPLACE ${PYTHON_PREFIX}/ "" PYTHON_SITE_PACKAGES_RELATIVE ${PYTHON_SITE_PACKAGES})
 
 install                     (TARGETS pywilkins
-                             LIBRARY DESTINATION ${PYTHON_SITE_PACKAGES_RELATIVE})
+                             LIBRARY DESTINATION ${PYTHON_SITE_PACKAGES_RELATIVE}/wilkins)
+
+install                     (FILES wilkins/utils.py
+                             DESTINATION ${PYTHON_SITE_PACKAGES_RELATIVE}/wilkins)
 
 install                     (TARGETS pywilkins
                             DESTINATION ${CMAKE_INSTALL_PREFIX}/examples/python

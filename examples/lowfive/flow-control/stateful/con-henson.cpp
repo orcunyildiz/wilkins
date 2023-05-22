@@ -10,7 +10,6 @@
 #include    "prod-con-multidata.hpp"
 
 #include <diy/mpi/communicator.hpp>
-//using communicator = diy::mpi::communicator;
 using communicator = MPI_Comm;
 using diy_comm = diy::mpi::communicator;
 
@@ -23,7 +22,7 @@ void consumer_f (std::string prefix,
 
     fmt::print("Entered consumer\n");
 
-    communicator local = MPI_COMM_WORLD; //orc@05-12: henson-mpi replaces the MPI_COMM_WORLD with the local comm, hence, no code changes are necessary.
+    communicator local = MPI_COMM_WORLD;
     diy::mpi::communicator local_(local);
 
     // --- consumer ranks running user task code ---
@@ -33,6 +32,7 @@ void consumer_f (std::string prefix,
 
         //adding sleep here to emulate (2x) slow consumer
         sleep(10);
+
         hid_t file        = H5Fopen("outfile.h5", H5F_ACC_RDONLY, H5P_DEFAULT);
         hid_t dset_grid   = H5Dopen(file, "/group1/grid", H5P_DEFAULT);
         hid_t dspace_grid = H5Dget_space(dset_grid);
@@ -65,7 +65,7 @@ void consumer_f (std::string prefix,
 
         // diy setup for the consumer task on the consumer side
         diy::FileStorage                con_storage(prefix);
-        diy::Master                     con_master(local,
+        diy::Master                     con_master(local_,
             threads,
             mem_blocks,
             &Block::create,

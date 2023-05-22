@@ -1,10 +1,9 @@
 tasks:
-  - func: prod-henson
-    start_proc: 0
+  - func: sim
     nprocs: 1
-    args: ["6"]
+    args: ["6", "-s"]
     outports:
-      - filename: outfile.h5
+      - filename: "outfile.h5"
         dsets:
           - name: /group1/grid
             passthru: 0
@@ -12,17 +11,15 @@ tasks:
           - name: /group1/particles
             passthru: 0
             metadata: 1
-  - func: con-henson
-    start_proc: 1
+  - func: ana
     nprocs: 1
-    args: ["3"]
     inports:
-      - filename: outfile.h5
+      - filename: "outfile.h5"
         io_freq: 2
         dsets:
           - name: /group1/grid
-            passthru: 1
-            metadata: 0
+            passthru: 0
+            metadata: 1
           - name: /group1/particles
-            passthru: 1
-            metadata: 0
+            passthru: 0
+            metadata: 1

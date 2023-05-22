@@ -10,7 +10,6 @@
 #include    "prod-con-multidata.hpp"
 
 #include <diy/mpi/communicator.hpp>
-//using communicator = diy::mpi::communicator;
 using communicator = MPI_Comm;
 using diy_comm = diy::mpi::communicator;
 
@@ -20,7 +19,7 @@ void consumer1_f (std::string prefix,
 {
     fmt::print("Entered consumer1\n");
 
-    communicator local = MPI_COMM_WORLD; //orc@05-12: henson-mpi replaces the MPI_COMM_WORLD with the local comm, hence, no code changes are necessary.
+    communicator local = MPI_COMM_WORLD;
     diy::mpi::communicator local_(local);
 
     // --- consumer ranks running user task code ---
@@ -32,7 +31,6 @@ void consumer1_f (std::string prefix,
             sleep(10);
 
 	// open the file, the dataset, and the dataspace
-	//hid_t file   = H5Fopen("outfile.h5", H5F_ACC_RDONLY, plist);
 	hid_t file   = H5Fopen("outfile.h5", H5F_ACC_RDONLY, H5P_DEFAULT);
 	hid_t dset   = H5Dopen(file, "/group1/grid", H5P_DEFAULT);
 	hid_t dspace = H5Dget_space(dset);
@@ -85,7 +83,6 @@ int main(int argc, char* argv[])
     MPI_Init(NULL, NULL);
     diy::mpi::communicator    world;
 
-    //TODO: Will move the looping logic to wilkins.py, then consumer doesn't need to know the number of iters/timesteps
     int iters         = 1;
     iters             = atoi(argv[1]);
 
