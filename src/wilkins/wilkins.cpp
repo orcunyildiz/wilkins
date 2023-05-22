@@ -141,109 +141,7 @@ vector<LowFiveProperty>
 wilkins::
 Wilkins::set_lowfive()
 {
-
-    std::string dflowName, full_path, filename, dset;
-    //std::set<std::string> filenames; //orc: we can have multiple intercoms per filename. TODO: Will see about subgraph API later w wilkins.py
-
-    std::vector<LowFiveProperty> vec_l5;
-
-
-    //prod-con related vol_plugin ops: setting zerocopy and intercomm per dataset
-    //I'm a producer
-    if (!out_dataflows.empty())
-    {
-     	int index = 0;
-        std::vector<string> execGroup_dataflows;
-     	for (Dataflow* df : out_dataflows)
-        {
-
-            dflowName = df->name();
-            stringstream line(dflowName);
-            std::getline(line, full_path, ':');
-            stringstream line2(full_path);
-            std::getline(line2, filename, '/');
-            dset = full_path.substr(full_path.find("/") + 1);
-            LowFiveProperty l5_prop;
-            l5_prop.filename = filename;
-            l5_prop.dset = dset;
-            l5_prop.execGroup = df->execGroup();
-            l5_prop.memory = 1;
-            l5_prop.producer = 1;
-            l5_prop.prodIndex = index;
-
-            l5_prop.flowPolicy = df->flowPolicy();
-
-            if(std::find(execGroup_dataflows.begin(), execGroup_dataflows.end(), df->execGroup()) == execGroup_dataflows.end())
-            {
-             	execGroup_dataflows.push_back(df->execGroup());
-                index++; //orc@05-12: increment only if it is not the same execGroup
-            }
-
-            // set zerocopy of dataset (default is lowfive (deep copy), zerocopy means shallow copy)
-            // filename and full path to dataset can contain '*' and '?' wild cards (ie, globs, not regexes)
-            if (df->zerocopy())
-                l5_prop.zerocopy = 1; //orc: set_zerocopy is done at wilkins.py.
-
-            if (df->out_passthru())
-                l5_prop.memory = 0;
-
-            //filenames.insert(filename);
-
-            vec_l5.emplace_back(l5_prop);
-
-            fmt::print("PRODUCER:passthru = {}, metadata = {}, zerocopy = {}, filename = {}, dset = {}\n", df->out_passthru(), df->out_metadata(), df->zerocopy(), filename, dset);
-
-         }
-    }
-
-    //I'm a consumer
-    if (!node_in_dataflows.empty())
-    {
-
-        int index = 0;
-        std::vector<string> execGroup_dataflows;
-        for (std::pair<Dataflow*, int> pair : node_in_dataflows)
-        {
-
-            dflowName = pair.first->name();
-            stringstream line(dflowName);
-            std::getline(line, full_path, ':');
-            stringstream line2(full_path);
-            std::getline(line2, filename, '/');
-            dset = full_path.substr(full_path.find("/") + 1);
-            LowFiveProperty l5_prop;
-            l5_prop.filename = filename;
-            l5_prop.dset = dset;
-            l5_prop.execGroup = pair.first->execGroup();
-            l5_prop.memory = 1;
-            l5_prop.consumer = 1;
-            l5_prop.conIndex = index;
-            l5_prop.flowPolicy = pair.first->flowPolicy();
-
-            // set intercomms of dataset
-            // filename and full path to dataset can contain '*' and '?' wild cards (ie, globs, not regexes)
-            //vol_plugin.set_intercomm(filename, dset, 0); //orc@05-11: In TP, need to increment/set index differently, which is not supported with set_lowfive(), see init() instead.
-            //vol_plugin.set_intercomm(filename, dset, index);
-            if(std::find(execGroup_dataflows.begin(), execGroup_dataflows.end(), pair.first->execGroup()) == execGroup_dataflows.end())
-            {
-             	execGroup_dataflows.push_back(pair.first->execGroup());
-                index++; //orc@05-12: increment only if it is not the same execGroup
-            }
-
-            // set passthru/memory at dataset level
-            if (pair.first->in_passthru())
-                l5_prop.memory = 0;
-
-            vec_l5.emplace_back(l5_prop);
-
-            fmt::print("CONSUMER: passthru = {}, metadata = {}, filename = {}, dset = {}\n", pair.first->in_passthru(), pair.first->in_metadata(), filename, dset);
-
-        }
-
-    } //endif consumer
-
-    return vec_l5;
-
+    return this->vec_l5_;
 }
 
 l5::DistMetadataVOL&
@@ -469,88 +367,136 @@ Wilkins::build_intercomms()
 {
 
     std::vector<MPI_Comm> communicators, out_communicators, in_communicators;
-    MPI_Comm intercomm, local_orig;
-    //local_orig = MPI_Comm(this->local_comm_handle());
+    MPI_Comm local_orig;
     local_orig = this->local_comm_handle();
 
     MPI_Comm local;
     MPI_Comm_dup(local_orig, &local);
 
-    std::vector<std::string> shared_dataflows;
     std::vector<std::string> execGroup_dataflows;
 
-    //I'm a producer
-    if (!out_dataflows.empty())
+    int index = 0; //used at L5 set_intercomm for con and flowPolicy for prod
+    std::vector<LowFiveProperty> vec_l5;
+    std::string dflowName, full_path, filename, dset;
+    //std::set<std::string> filenames; //orc: we can have multiple intercoms per filename. TODO: Will see about subgraph API later w wilkins.py
+
+    int j=0;
+    int k = 0;
+    for (size_t i = 0; i < workflow_.links.size(); i++)
     {
-        for (Dataflow* df : out_dataflows)
+
+        if (workflow_.my_in_link(workflow_rank_, i) || workflow_.my_out_link(workflow_rank_, i))
         {
-
-            if (df->sizes()->con_start == df->sizes()->prod_start)
+            //orc@18-05: here we do in the order of links, rather than each task going thru their order
+            if (workflow_.my_out_link(workflow_rank_, i))
             {
-                if(std::find(shared_dataflows.begin(), shared_dataflows.end(), df->name()) == shared_dataflows.end())
-                {
-                    MPI_Comm_dup(local_orig, &intercomm); //orc@05-11: need duplicate intercomms for the shared mode
-                    shared_dataflows.push_back(df->name());
-                    communicators.push_back(intercomm);
-                    out_communicators.push_back(intercomm);
-                }
-            }
-            else
-            {
+                dflowName = out_dataflows[j]->name();
+                stringstream line(dflowName);
+                std::getline(line, full_path, ':');
+                stringstream line2(full_path);
+                std::getline(line2, filename, '/');
+                dset = full_path.substr(full_path.find("/") + 1);
+                LowFiveProperty l5_prop;
+                l5_prop.filename = filename;
+                l5_prop.dset = dset;
+                l5_prop.execGroup = out_dataflows[j]->execGroup();
+                l5_prop.memory = 1;
+                l5_prop.producer = 1;
 
-                //TODO: orc@05-12: Multiple intercomms have not been disabled for TP mode.
-                //I can do the same check as above for shared_dataflows for the same prod-con pair to disable multiple intercomms.
-                //Then, we would need to adjust the indexing accordingly in init. Q: should this include filename info as well in terms of sync.
-                if(std::find(execGroup_dataflows.begin(), execGroup_dataflows.end(), df->execGroup()) == execGroup_dataflows.end())
+                l5_prop.flowPolicy = out_dataflows[j]->flowPolicy();
+
+                // set zerocopy of dataset (default is lowfive (deep copy), zerocopy means shallow copy)
+                // filename and full path to dataset can contain '*' and '?' wild cards (ie, globs, not regexes)
+                if (out_dataflows[j]->zerocopy())
+                    l5_prop.zerocopy = 1; //orc: set_zerocopy is done at wilkins.py.
+
+                if (out_dataflows[j]->out_passthru())
+                    l5_prop.memory = 0;
+
+                //filenames.insert(filename);
+
+                if(std::find(execGroup_dataflows.begin(), execGroup_dataflows.end(), out_dataflows[j]->execGroup()) == execGroup_dataflows.end())
                 {
-                    execGroup_dataflows.push_back(df->execGroup());
+                    execGroup_dataflows.push_back(out_dataflows[j]->execGroup());
                     MPI_Comm intercomm_;
-                    int remote_leader = df->sizes()->con_start;
-                    MPI_Intercomm_create(local, 0, world_comm_, remote_leader,  0, &intercomm_);
+                    if (out_dataflows[j]->sizes()->con_start == out_dataflows[j]->sizes()->prod_start) //TP
+                    {
+                        MPI_Comm_dup(local_orig, &intercomm_);
+                    }
+                    else //SP
+                    {
+                        int remote_leader = out_dataflows[j]->sizes()->con_start;
+                        MPI_Intercomm_create(local, 0, world_comm_, remote_leader,  0, &intercomm_);
+                    }
+
                     communicators.push_back(intercomm_);
                     out_communicators.push_back(intercomm_);
+                    l5_prop.prodIndex = index;
+                    index++;
                 }
-            }
-
-        }
-
-    }
-
-    //I'm a consumer
-    if (!node_in_dataflows.empty())
-    {
-
-     	for (std::pair<Dataflow*, int> pair : node_in_dataflows)
-        {
-
-            if (pair.first->sizes()->prod_start == pair.first->sizes()->con_start)
-            {
-                if(std::find(shared_dataflows.begin(), shared_dataflows.end(), pair.first->name()) == shared_dataflows.end())
+                else
                 {
-                    MPI_Comm_dup(local_orig, &intercomm); //orc@05-11: need duplicate intercomms for the shared mode
-                    shared_dataflows.push_back(pair.first->name());
-                    communicators.push_back(intercomm);
-                    in_communicators.push_back(intercomm);
+                    l5_prop.prodIndex = index-1;
                 }
+
+                j++; //NB: we still create dataflows, but not intercomm
+                vec_l5.emplace_back(l5_prop);
+
             }
-            else
+            else //incoming link
             {
 
-                if(std::find(execGroup_dataflows.begin(), execGroup_dataflows.end(), pair.first->execGroup()) == execGroup_dataflows.end())
+                dflowName = node_in_dataflows[k].first->name();
+                stringstream line(dflowName);
+                std::getline(line, full_path, ':');
+                stringstream line2(full_path);
+                std::getline(line2, filename, '/');
+                dset = full_path.substr(full_path.find("/") + 1);
+                LowFiveProperty l5_prop;
+                l5_prop.filename = filename;
+                l5_prop.dset = dset;
+                l5_prop.execGroup = node_in_dataflows[k].first->execGroup();
+                l5_prop.memory = 1;
+                l5_prop.consumer = 1;
+                l5_prop.flowPolicy = node_in_dataflows[k].first->flowPolicy();
+
+                // set passthru/memory at dataset level
+                if (node_in_dataflows[k].first->in_passthru())
+                    l5_prop.memory = 0;
+
+                if(std::find(execGroup_dataflows.begin(), execGroup_dataflows.end(), node_in_dataflows[k].first->execGroup()) == execGroup_dataflows.end())
                 {
-                    execGroup_dataflows.push_back(pair.first->execGroup());
+                    execGroup_dataflows.push_back(node_in_dataflows[k].first->execGroup());
                     MPI_Comm intercomm_;
-                    int remote_leader = pair.first->sizes()->prod_start;
-                    MPI_Intercomm_create(local, 0, world_comm_, remote_leader,  0, &intercomm_);
-                    //intercomm = MPI_Comm(intercomm_);
+
+                    if (node_in_dataflows[k].first->sizes()->prod_start == node_in_dataflows[k].first->sizes()->con_start) //TP
+                    {
+                        MPI_Comm_dup(local_orig, &intercomm_); //orc@05-11: need duplicate intercomms for the shared mode
+                    }
+                    else //SP
+                    {
+                        int remote_leader = node_in_dataflows[k].first->sizes()->prod_start;
+                        MPI_Intercomm_create(local, 0, world_comm_, remote_leader,  0, &intercomm_);
+                    }
+
                     communicators.push_back(intercomm_);
                     in_communicators.push_back(intercomm_);
+                    l5_prop.conIndex = index;
+                    index++;
                 }
+                else //it's a link, but no intercomm created as they are within the same execGroup
+                {
+                    l5_prop.conIndex = index-1;
+                }
+
+                k++;
+                vec_l5.emplace_back(l5_prop);
+
             }
-
         }
-
     }
+
+    this->vec_l5_ = vec_l5;
 
     //orc@21-02: required for the commit function
     this->intercomms_ = communicators;

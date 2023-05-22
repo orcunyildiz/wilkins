@@ -112,8 +112,10 @@ private:
     //orc@12-07: plist that will be provided to the user code
     hid_t plist_;
 
-    //wilkins provides filenames to th user tasks for subgraph API
+    //wilkins provides filenames to the user tasks for subgraph API
     vector<std::string> filenames_;
+
+    vector<LowFiveProperty> vec_l5_;                       // l5 properties
 
     //orc@27-10: deprecated as they are used in build_lowfive(), which is deprecated as well.
     //NB: out_intercomms_ is used also in commit().

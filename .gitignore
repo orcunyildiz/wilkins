@@ -2,3 +2,5 @@ build/
 install/
 python/*.pyc
 .peru/
+spack*
+src/wilkins/*backup*
