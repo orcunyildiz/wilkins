@@ -1,0 +1,52 @@
+tasks:
+  - func: node0-test
+    nprocs: 1
+    args: ["2", "-s"]
+    inports:
+      - filename: "outfile2.h5"
+        dsets:
+          - name: /group1/particles
+            passthru: 0
+            metadata: 1
+    outports:
+      - filename: "outfile0.h5"
+        dsets:
+          - name: /group1/grid
+            passthru: 0
+            metadata: 1
+          - name: /group1/particles
+            passthru: 0
+            metadata: 1
+  - func: node1-test
+    nprocs: 1
+    args: ["2"]
+    inports:
+      - filename: "outfile0.h5"
+        dsets:
+          - name: /group1/grid
+            passthru: 0
+            metadata: 1
+          - name: /group1/particles
+            passthru: 0
+            metadata: 1
+    outports:
+      - filename: "outfile1.h5"
+        dsets:
+          - name: /group1/particles
+            passthru: 0
+            metadata: 1
+  - func: node2-test
+    nprocs: 1
+    args: ["2"]
+    inports:
+      - filename: "outfile1.h5"
+        dsets:
+          - name: /group1/particles
+            passthru: 0
+            metadata: 1
+    outports:
+      - filename: "outfile2.h5"
+        dsets:
+          - name: /group1/particles
+            passthru: 0
+            metadata: 1

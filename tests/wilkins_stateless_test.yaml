@@ -1,0 +1,26 @@
+tasks:
+  - func: sim-test
+    nprocs: 1
+    args: ["6"]
+    outports:
+      - filename: "*.h5"
+        dsets:
+          - name: /group1/grid
+            passthru: 0
+            metadata: 1
+          - name: /group1/particles
+            passthru: 0
+            metadata: 1
+  - func: ana-test
+    nprocs: 1
+    args: ["{filename}"]
+    inports:
+      - filename: "*.h5"
+        io_freq: 2
+        dsets:
+          - name: /group1/grid
+            passthru: 0
+            metadata: 1
+          - name: /group1/particles
+            passthru: 0
+            metadata: 1

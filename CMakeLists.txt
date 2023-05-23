@@ -108,3 +108,8 @@ if                          (wilkins_python)
     add_subdirectory        (ext/pybind11)
     add_subdirectory        (bindings/python)
 endif                       (wilkins_python)
+
+#testing
+enable_testing              ()
+include                     (CTest)
+add_subdirectory            (tests)
