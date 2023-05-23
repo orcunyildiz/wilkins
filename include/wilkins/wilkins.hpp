@@ -80,12 +80,9 @@ public:
 
     Comm* world;
 
-    hid_t plist();
     vector<std::string> filenames();
     int is_io_proc();
 
-    l5::DistMetadataVOL& build_lowfive(); //orc@27-10: deprecated, will delete later. Keeping it as reference for the time being.
-    l5::DistMetadataVOL& init();
     vector<LowFiveProperty> set_lowfive();
     void wait(); //orc@06-10: consumer waits until producer issues a commit function.
     vector<MPI_Comm> build_intercomms();
@@ -109,8 +106,6 @@ private:
 
     int tokens_;                                // Number of empty messages to generate before doing a real get
     int io_proc_;				// indicates whether process participates in I/O (i.e., L5 ops)
-    //orc@12-07: plist that will be provided to the user code
-    hid_t plist_;
 
     //wilkins provides filenames to the user tasks for subgraph API
     vector<std::string> filenames_;

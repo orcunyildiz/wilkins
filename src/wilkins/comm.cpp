@@ -22,7 +22,7 @@ Comm::rank()
     return rank_;
 }
 
-// forms a deaf communicator from contiguous world ranks of an MPI communicator
+// forms a communicator from contiguous world ranks of an MPI communicator
 // only collective over the ranks in the range [min_rank, max_rank]
 wilkins::
 Comm::Comm(CommHandle world_comm,
