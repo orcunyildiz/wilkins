@@ -164,9 +164,7 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    // node1 will read different block decomposition than the producer
-    // producer also needs to know this number so it can match collective operations
-    int con_nblocks = pow(2, dim) * global_nblocks;
+    int con_nblocks =  global_nblocks;
 
     node1_f(prefix, threads, mem_blocks, con_nblocks, iters);
 

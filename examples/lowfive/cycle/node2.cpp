@@ -52,7 +52,7 @@ void node2_f (std::string prefix,
             for (int i = 0; i < dim; ++i)
             {
                 domain.min[i] = 0;
-                domain.max[i] = 10; //con_nblocks;
+                domain.max[i] = 10;
             }
         }
         fmt::print(stderr, "Read domain: {} {}\n", domain.min, domain.max);
@@ -65,7 +65,7 @@ void node2_f (std::string prefix,
             H5Sget_select_bounds(dspace_particles, min_.data(), max_.data());
             global_num_points = max_[0] + 1;
         }
-        fmt::print(stderr, "Global num points: {}\n", global_num_points);
+        fmt::print(stderr, "Received global num points: {}, will send {} points\n", global_num_points, (global_num_points/(i+1)));
 
         // diy setup for the node2 task on the consumer side
         diy::FileStorage                con_storage(prefix);
@@ -99,7 +99,7 @@ void node2_f (std::string prefix,
 
             std::vector<hsize_t> domain_cnts(DIM);
             // create the file data space for the particles
-            domain_cnts[0]  = global_num_points;
+            domain_cnts[0]  = (global_num_points/(i+1)); //reducing sent number of particles each iter
             domain_cnts[1]  = DIM;
 
             hid_t filespace_w = H5Screate_simple(2, &domain_cnts[0], NULL);

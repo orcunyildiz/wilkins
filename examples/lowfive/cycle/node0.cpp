@@ -46,19 +46,16 @@ void node0_f (std::string prefix,
         diy::ContiguousAssigner         prod_assigner(local_.size(), global_nblocks);
         diy::RegularDecomposer<Bounds>  prod_decomposer(dim, domain, global_nblocks);
         prod_decomposer.decompose(local_.rank(), prod_assigner, prod_create);
-
+        // get global number of particles
+        size_t global_num_points_r = global_num_points; // only for the first iteration which then will be overwritten
         //orc@16-05: adding reading here from node2
         //TODO: we had token functionality before.
         if (i > 0)
         {
-
-            //TODO: We can also gradually decrease # of particles.
             hid_t file_r        = H5Fopen("outfile2.h5", H5F_ACC_RDONLY, H5P_DEFAULT);
             hid_t dset_r        = H5Dopen(file_r, "/group1/particles", H5P_DEFAULT);
             hid_t dspace_r      = H5Dget_space(dset_r);
 
-            // get global number of particles
-            size_t global_num_points_r;
             {
                 std::vector<hsize_t> min_(1), max_(1);
                 H5Sget_select_bounds(dspace_r, min_.data(), max_.data());
@@ -66,9 +63,7 @@ void node0_f (std::string prefix,
             }
             fmt::print(stderr, "Global num points: {}\n", global_num_points_r);
 
-            //TODO: define con_nblocks. orc@16-05: defined as global_nblocks
             size_t local_num_points_r = global_num_points_r / global_nblocks;
-            //TODO: do I need to decompositon twice, see above for the producer
             AddBlock                        prod_create_r(prod_master, local_num_points_r, global_num_points_r, global_nblocks);
             prod_decomposer.decompose(local_.rank(), prod_assigner, prod_create_r); //orc@16-05: doing decomposition again as global_num_points_r is decreasing
 
@@ -81,8 +76,6 @@ void node0_f (std::string prefix,
             H5Dclose(dset_r);
             H5Fclose(file_r);
         }
-        //orc@16-05: probably, would need to do decompositon here
-        prod_decomposer.decompose(local_.rank(), prod_assigner, prod_create);
 
         //orc@16-05: writing part
         std::string filename;
@@ -118,7 +111,7 @@ void node0_f (std::string prefix,
         H5Sclose(filespace);
 
         // create the file data space for the particles
-        domain_cnts[0]  = global_num_points;
+        domain_cnts[0]  = global_num_points_r; //gradually decreasing number of particles
         domain_cnts[1]  = DIM;
         filespace = H5Screate_simple(2, &domain_cnts[0], NULL);
 
@@ -206,8 +199,6 @@ int main(int argc, char* argv[])
         }
         return 1;
     }
-
-    size_t global_npoints = global_nblocks * local_npoints;         // all block have same number of points
 
     node0_f(prefix, threads, mem_blocks, domain, global_nblocks, dim, local_npoints, iters, single_file);
 
