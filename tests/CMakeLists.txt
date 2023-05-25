@@ -61,10 +61,13 @@ add_test                (NAME cycle-memory
 #TODO: Add tests with different io frequencies (e.g., latest).
 
 add_test                (NAME stateful-sameFile
-                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-stateful.sh ${CMAKE_CURRENT_BINARY_DIR} 0)
+                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-stateful.sh ${CMAKE_CURRENT_BINARY_DIR} 0 0)
 
 add_test                (NAME stateful-differentFiles
-                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-stateful.sh ${CMAKE_CURRENT_BINARY_DIR} 1)
+                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-stateful.sh ${CMAKE_CURRENT_BINARY_DIR} 1 0)
+
+add_test                (NAME stateful-subsetWriters
+                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-stateful.sh ${CMAKE_CURRENT_BINARY_DIR} 1 1)
 
 add_test                (NAME stateless-sameFile
                         COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-stateless.sh ${CMAKE_CURRENT_BINARY_DIR} 0)

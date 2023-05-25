@@ -19,12 +19,11 @@ using diy_comm = diy::mpi::communicator;
 void producer_f (std::string prefix,
                  int threads, int mem_blocks,
                  Bounds domain,
-                 int global_nblocks, int dim, size_t local_num_points, int iters, bool single_file)
+                 int global_nblocks, int dim, size_t local_num_points, int iters, bool single_file, communicator local)
 {
 
     fmt::print("Entered producer\n");
 
-    communicator local = MPI_COMM_WORLD;
     diy::mpi::communicator local_(local);
 
     // --- producer ranks running user task code  ---
@@ -110,6 +109,10 @@ int main(int argc, char* argv[])
 
     diy::mpi::communicator    world;
 
+    communicator local = MPI_COMM_WORLD;
+    diy::mpi::communicator local_(local);
+    int nwriters      = local_.size();
+
     int iters         = 2;
     iters             = atoi(argv[1]);
 
@@ -148,8 +151,10 @@ int main(int argc, char* argv[])
 
     //orc@16-05: adding cmdline arg to emulate both single/varying filenames
     bool single_file;
+
     ops
         >> Option('s', "single",   single_file,        "whether same or different files are generated")
+        >> Option(     "nwriters", nwriters,           "number of writers")
         ;
 
 
@@ -172,7 +177,18 @@ int main(int argc, char* argv[])
 
     size_t global_npoints = global_nblocks * local_npoints;         // all block have same number of points
 
-    producer_f(prefix, threads, mem_blocks, domain, global_nblocks, dim, local_npoints, iters, single_file);
+    if (nwriters < local_.size()) //exercising the support for subset of writers (e.g., rank 0)
+    {
+        communicator writers;
+        bool writer = local_.rank() < nwriters;
+        MPI_Comm_split(local, writer ? 0 : 1, 0, &writers);
+        if (local_.rank() < nwriters)
+            producer_f(prefix, threads, mem_blocks, domain, global_nblocks, dim, local_npoints, iters, single_file, writers);
+    }
+    else
+    {
+        producer_f(prefix, threads, mem_blocks, domain, global_nblocks, dim, local_npoints, iters, single_file, local);
+    }
 
     MPI_Finalize();
 

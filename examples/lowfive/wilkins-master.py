@@ -94,6 +94,7 @@ lowfive.create_logger("info")
 #orc@31-03: adding for the new control logic: consumer looping until there are files
 wlk_producer = -1
 wlk_consumer = -1
+vol = None
 
 #NB: In some cases, L5 comms should only include subset of processes (e.g., rank 0 from LPS)
 io_proc = wilkins.is_io_proc()
@@ -163,7 +164,7 @@ else:
 
 if stateful:
     from wilkins.utils import exec_stateful
-    exec_stateful(puppets, myTasks, vol, wlk_consumer, pm, nm)
+    exec_stateful(puppets, myTasks, vol, wlk_consumer, pm, nm, io_proc)
 else:
     from wilkins.utils import exec_stateless
     exec_stateless(puppets, myTasks, vol, wlk_consumer, wlk_producer, pm, nm)

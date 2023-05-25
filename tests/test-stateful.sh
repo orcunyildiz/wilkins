@@ -2,13 +2,18 @@
 
 bin_dir=$1
 differentFiles=$2
-
+subset=$3
 if [ $differentFiles == 0 ]; then
     echo "mpirun -n 2 -l python -u wilkins-master.py wilkins_prod_stateful_test_singleFile.yaml"
-    mpirun -n 2 -l python -u ../../examples/lowfive/wilkins-master.py ../../tests/wilkins_stateful_test_singleFile.yaml
+    mpirun -n 2 -l python -u ../../examples/lowfive/wilkins-master.py ../../tests/wilkins_stateful_test_singleFile.yaml -s
 else
-    echo "mpirun -n 2 -l python -u wilkins-master.py wilkins_stateful_test.yaml"
-    mpirun -n 2 -l python -u ../../examples/lowfive/wilkins-master.py ../../tests/wilkins_stateful_test.yaml
+    if [ $subset == 0 ]; then
+        echo "mpirun -n 2 -l python -u wilkins-master.py wilkins_stateful_test.yaml"
+        mpirun -n 2 -l python -u ../../examples/lowfive/wilkins-master.py ../../tests/wilkins_stateful_test.yaml -s
+    else
+        echo "mpirun -n 5 -l python -u wilkins-master.py wilkins_stateful_test_subsetWriters.yaml"
+        mpirun -n 5 -l python -u ../../examples/lowfive/wilkins-master.py ../../tests/wilkins_stateful_test_subsetWriters.yaml -s 
+    fi
 fi
 
 retval=$?

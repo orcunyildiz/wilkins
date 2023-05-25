@@ -7,7 +7,7 @@ def import_from(module, name):
     module = __import__(module, fromlist=[name])
     return getattr(module, name)
 
-def exec_stateful(puppets, myTasks, vol, wlk_consumer, pm, nm):
+def exec_stateful(puppets, myTasks, vol, wlk_consumer, pm, nm, io_proc):
     import pyhenson as h
     substitute_fn=-1
     task_args = puppets[myTasks[0]][1]
@@ -18,7 +18,7 @@ def exec_stateful(puppets, myTasks, vol, wlk_consumer, pm, nm):
     myPuppet = h.Puppet(puppets[myTasks[0]][0], task_args, pm, nm)
 
     #support for dynamic filenames
-    if substitute_fn!=-1:
+    if substitute_fn!=-1 and io_proc==1:
         def scf_cb():
             fnames = vol.get_filenames(wlk_consumer)
             print(f"{fnames = }")
