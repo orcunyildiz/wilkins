@@ -13,16 +13,22 @@ You can either install Wilkins using [Spack](https://spack.readthedocs.io/en/lat
 ## Installing with Spack
 
 First, install Spack as explained [here](https://spack.readthedocs.io/en/latest/getting_started.html). Once Spack is
-installed and available in your path, clone the Wilkins repository and add it to your local Spack repositories:
+installed and available in your path, clone the Wilkins and LowFive repositories and add them to your local Spack repositories:
 
 ```
+cd /path/to/wilkins/
 git clone https://github.com/orcunyildiz/wilkins.git .
 spack repo add /path/to/wilkins/
+
+cd /path/to/lowfive/
+git clone https://github.com/diatomic/LowFive.git .
+spack repo add /path/to/lowfive/
 ```
 
-You can confirm that Spack can find Wilkins:
+You can confirm that Spack can find Wilkins and LowFive:
 ```
 spack info wilkins
+spack info lowfive
 ```
 
 Then install Wilkins. This could take some time depending on whether you already have a Spack system with MPI
