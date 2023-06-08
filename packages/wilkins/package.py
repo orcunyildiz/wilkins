@@ -33,7 +33,8 @@ class Wilkins(CMakePackage):
 
     def cmake_args(self):
         args = ['-DCMAKE_C_COMPILER=%s' % self.spec['mpi'].mpicc,
-                '-DCMAKE_CXX_COMPILER=%s' % self.spec['mpi'].mpicxx]
+                '-DCMAKE_CXX_COMPILER=%s' % self.spec['mpi'].mpicxx,
+                self.define("PYTHON_EXECUTABLE", self.spec["python"].command.path)]
 
         return args
 
