@@ -64,7 +64,7 @@ Wilkins is built using CMake. Assuming that you created a build directory, then:
 ```
 cd path/to/wilkins/build
 
-cmake /path/to/wilkins/source \
+cmake /path/to/wilkins/ \
 -DCMAKE_CXX_COMPILER=mpicxx \
 -DCMAKE_C_COMPILER=mpicc \
 -DCMAKE_INSTALL_PREFIX=/path/to/wilkins/install \
@@ -87,8 +87,7 @@ make install
 # Running examples
 
 Wilkins provides several examples of simple workflows. 
-With Spack installation, the environment variables required for its LowFive layer are automatically set, but with manual installation,
-set them as follows:
+With Spack installation, the environment variables required for its LowFive layer are automatically set after doing ``` spack load wilkins```, but with manual installation, set them as follows:
 
 ```
 export HDF5_VOL_CONNECTOR=lowfive under_vol=0;under_info={};
