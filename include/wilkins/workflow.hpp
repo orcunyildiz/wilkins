@@ -33,6 +33,7 @@ struct LowFivePort
     int zerocopy;
     int passthru;
     int metadata;
+    int io_freq;
 };
 
 struct WorkflowNode                          /// a producer or consumer
@@ -50,6 +51,7 @@ struct WorkflowNode                          /// a producer or consumer
     int start_proc;             ///< starting processor rank (root) in world communicator for this producer or consumer
     int nprocs;                 ///< number of processes for this node (producer or consumer)
     int nwriters;               ///< (optional) number of writer processes for producer
+    int taskCount;              ///< (optional) number of instances in ensembles
     string func;                ///< name of node callback
     vector<string> args;        ///< (optional) task arguments
     vector<string> actions;     ///< (optional) task actions
