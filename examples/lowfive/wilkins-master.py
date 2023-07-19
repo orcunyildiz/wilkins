@@ -1,4 +1,4 @@
-#Usage: mpirun -n $nprocs python wlk_flow_control.py config_file
+#Usage: mpirun -n $nprocs python wilkins-master.py config_file
 #config_files= [wilkins_prod_con.yaml, wilkins_prod_2cons.yaml]
 
 import os
@@ -72,12 +72,15 @@ myTasks    = []
 puppets    = []
 actions    = []
 i = 0
+ensembles = 0
 for node in workflow.nodes:
     procs_yaml.append((node.func, node.nprocs))
     task_exec = "./" + node.func  + ".hx"; #TODO: This can be an extra field in the YAML file if needed.
     puppets.append((task_exec, node.args))
     if node.actions:
         actions.append((node.func, node.actions))
+    if node.taskCount > 1:
+        ensembles = 1
     #bookkeping of tasks belonging to the execution group
     if rank>=node.start_proc and rank < node.start_proc + node.nprocs:
         myTasks.append(i)
@@ -112,11 +115,17 @@ if io_proc==1:
     for prop in l5_props:
         #print(prop.filename, prop.dset, prop.producer, prop.consumer, prop.execGroup, prop.memory, prop.prodIndex, prop.conIndex, prop.zerocopy, prop.flowPolicy)
         if prop.memory==1: #TODO: L5 doesn't support both memory and passthru at the moment. This logic might change once L5 supports both modes.
-            vol.set_memory(prop.filename, prop.dset)
+            if ensembles==1:#orc@18-07: TODO: temporary workaround for ensembles, see whether there is a better way.
+                vol.set_memory("*", "*")
+            else:
+                vol.set_memory(prop.filename, prop.dset)
         else:
             vol.set_passthru(prop.filename, prop.dset)
         if prop.consumer==1 and not any(x in prop.execGroup for x in execGroup): #orc: setting single intercomm per execGroup.
-            vol.set_intercomm(prop.filename, prop.dset, prop.conIndex)
+            if ensembles==1: #orc@18-07: TODO: temporary workaround for ensembles, see whether there is a better way.
+                vol.set_intercomm("*", "*", prop.conIndex)
+            else:
+                vol.set_intercomm(prop.filename, prop.dset, prop.conIndex)
             wlk_consumer =  prop.conIndex
             execGroup.append(prop.execGroup)
         if prop.producer==1: #NB: Task can be both producer and consumer.
@@ -168,4 +177,3 @@ if stateful:
 else:
     from wilkins.utils import exec_stateless
     exec_stateless(puppets, myTasks, vol, wlk_consumer, wlk_producer, pm, nm)
-
