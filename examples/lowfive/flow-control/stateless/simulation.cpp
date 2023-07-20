@@ -19,12 +19,11 @@ using diy_comm = diy::mpi::communicator;
 void producer_f (std::string prefix,
                  int threads, int mem_blocks,
                  Bounds domain,
-                 int global_nblocks, int dim, size_t local_num_points, int iters, bool single_file)
+                 int global_nblocks, int dim, size_t local_num_points, int iters, bool single_file, communicator local)
 {
 
     fmt::print("Entered producer\n");
 
-    communicator local = MPI_COMM_WORLD;
     diy::mpi::communicator local_(local);
 
     // --- producer ranks running user task code  ---
@@ -61,7 +60,11 @@ void producer_f (std::string prefix,
             filename = "outfile_" +  std::to_string(i) + ".h5";
         }
 
-        hid_t file = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+
+        hid_t plist = H5Pcreate(H5P_FILE_ACCESS);
+        H5Pset_fapl_mpio(plist, local, MPI_INFO_NULL);
+        hid_t file = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, plist);
+
         hid_t group = H5Gcreate(file, "/group1", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
         std::vector<hsize_t> domain_cnts(DIM);
@@ -98,6 +101,7 @@ void producer_f (std::string prefix,
         H5Sclose(filespace);
         H5Gclose(group);
         H5Fclose(file);
+        H5Pclose(plist);
     }
 
 }
@@ -110,6 +114,10 @@ int main(int argc, char* argv[])
     MPI_Init(NULL, NULL);
 
     diy::mpi::communicator    world;
+
+    //orc@12-06: for plist to work, duplicating comm here
+    communicator local;
+    MPI_Comm_dup(world, &local);
 
     int iters         = 2;
     iters             = atoi(argv[1]);
@@ -172,7 +180,7 @@ int main(int argc, char* argv[])
 
     size_t global_npoints = global_nblocks * local_npoints;         // all block have same number of points
 
-    producer_f(prefix, threads, mem_blocks, domain, global_nblocks, dim, local_npoints, iters, single_file);
+    producer_f(prefix, threads, mem_blocks, domain, global_nblocks, dim, local_npoints, iters, single_file, local);
 
     MPI_Finalize();
 

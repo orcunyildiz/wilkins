@@ -17,17 +17,18 @@ using diy_comm = diy::mpi::communicator;
 
 void consumer_f (std::string prefix,
                  int threads, int mem_blocks,
-                 int con_nblocks)
+                 int con_nblocks, communicator local)
 {
 
     fmt::print("Entered consumer\n");
 
-    communicator local = MPI_COMM_WORLD;
     diy::mpi::communicator local_(local);
 
     //adding sleep here to emulate (2x) slow consumer.
     sleep(10);
-    hid_t file        = H5Fopen("outfile.h5", H5F_ACC_RDONLY, H5P_DEFAULT);
+    hid_t plist = H5Pcreate(H5P_FILE_ACCESS);
+    H5Pset_fapl_mpio(plist, local, MPI_INFO_NULL);
+    hid_t file        = H5Fopen("outfile.h5", H5F_ACC_RDONLY, plist);
     hid_t dset_grid   = H5Dopen(file, "/group1/grid", H5P_DEFAULT);
     hid_t dspace_grid = H5Dget_space(dset_grid);
 
@@ -87,6 +88,8 @@ void consumer_f (std::string prefix,
     H5Dclose(dset_grid);
     H5Dclose(dset_particles);
     H5Fclose(file);
+    H5Pclose(plist);
+
 }
 
 int main(int argc, char* argv[])
@@ -97,6 +100,9 @@ int main(int argc, char* argv[])
     MPI_Init(NULL, NULL);
 
     diy::mpi::communicator    world;
+    //orc@12-06: for plist to work, duplicating comm here
+    communicator local;
+    MPI_Comm_dup(world, &local);
 
     fmt::print("Halo from stateless consumer\n");
 
@@ -137,7 +143,7 @@ int main(int argc, char* argv[])
     // producer also needs to know this number so it can match collective operations
     int con_nblocks = pow(2, dim) * global_nblocks;
 
-    consumer_f(prefix, threads, mem_blocks, con_nblocks);
+    consumer_f(prefix, threads, mem_blocks, con_nblocks, local);
 
     MPI_Finalize();
 }

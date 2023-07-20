@@ -33,6 +33,16 @@ target_link_libraries       (ana-test ${libraries})
 set_target_properties       (ana-test PROPERTIES PREFIX "")
 set_target_properties       (ana-test PROPERTIES SUFFIX ".hx")
 
+add_library                 (prod-ensemble SHARED ../examples/lowfive/ensembles/producer.cpp)
+target_link_libraries       (prod-ensemble ${libraries})
+set_target_properties       (prod-ensemble PROPERTIES PREFIX "")
+set_target_properties       (prod-ensemble PROPERTIES SUFFIX ".hx")
+
+add_library                 (con-ensemble SHARED ../examples/lowfive/ensembles/consumer.cpp)
+target_link_libraries       (con-ensemble ${libraries})
+set_target_properties       (con-ensemble PROPERTIES PREFIX "")
+set_target_properties       (con-ensemble PROPERTIES SUFFIX ".hx")
+
 if                          (NOT APPLE)
    set                      (linker_flags "-pie -Wl,--export-dynamic")
    set                      (linker_flags "${linker_flags} -Wl,-u,henson_set_contexts,-u,henson_set_namemap")
@@ -47,30 +57,45 @@ set_target_properties    (prod-test         PROPERTIES LINK_FLAGS ${linker_flags
 set_target_properties    (con-test          PROPERTIES LINK_FLAGS ${linker_flags})
 set_target_properties    (sim-test          PROPERTIES LINK_FLAGS ${linker_flags})
 set_target_properties    (ana-test          PROPERTIES LINK_FLAGS ${linker_flags})
+set_target_properties    (prod-ensemble     PROPERTIES LINK_FLAGS ${linker_flags})
+set_target_properties    (con-ensemble      PROPERTIES LINK_FLAGS ${linker_flags})
 
 # ------------ test cycle (node 0 -> node 1 -> node 2 -> node 0) ------------------
 
 add_test                (NAME cycle-memory
                         COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-cycle.sh ${CMAKE_CURRENT_BINARY_DIR} 0)
 
-#TODO: enable passthru test for cycle and add passthru tests for flow control examples once it's supported.
-
 #add_test                (NAME cycle-passthru
 #                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-cycle.sh ${CMAKE_CURRENT_BINARY_DIR} 1)
+
+#add_test                (NAME ensemble-fanin #Nx1 #TODO: enable once fixed
+#                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-ensemble.sh ${CMAKE_CURRENT_BINARY_DIR} 0)
+
+add_test                (NAME ensemble-fanout #1xN
+                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-ensemble.sh ${CMAKE_CURRENT_BINARY_DIR} 1)
+
+add_test                (NAME ensemble-NxN #NxN
+                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-ensemble.sh ${CMAKE_CURRENT_BINARY_DIR} 2)
 
 #TODO: Add tests with different io frequencies (e.g., latest).
 
 add_test                (NAME stateful-sameFile
-                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-stateful.sh ${CMAKE_CURRENT_BINARY_DIR} 0 0)
+                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-stateful.sh ${CMAKE_CURRENT_BINARY_DIR} 0 0 0)
 
 add_test                (NAME stateful-differentFiles
-                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-stateful.sh ${CMAKE_CURRENT_BINARY_DIR} 1 0)
+                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-stateful.sh ${CMAKE_CURRENT_BINARY_DIR} 1 0 0)
+
+add_test                (NAME stateful-differentFiles-passthru
+                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-stateful.sh ${CMAKE_CURRENT_BINARY_DIR} 1 0 1)
 
 add_test                (NAME stateful-subsetWriters
-                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-stateful.sh ${CMAKE_CURRENT_BINARY_DIR} 1 1)
+                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-stateful.sh ${CMAKE_CURRENT_BINARY_DIR} 1 1 0)
 
 add_test                (NAME stateless-sameFile
-                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-stateless.sh ${CMAKE_CURRENT_BINARY_DIR} 0)
+                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-stateless.sh ${CMAKE_CURRENT_BINARY_DIR} 0 0)
 
 add_test                (NAME stateless-differentFiles
-                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-stateless.sh ${CMAKE_CURRENT_BINARY_DIR} 1)
+                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-stateless.sh ${CMAKE_CURRENT_BINARY_DIR} 1 0)
+
+add_test                (NAME stateless-differentFiles-passthru
+                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-stateless.sh ${CMAKE_CURRENT_BINARY_DIR} 1 1)

@@ -7,7 +7,7 @@ import os
 #os.environ["HDF5_PLUGIN_PATH"] = "/Users/oyildiz/Work/software/lowfive/build/src"
 #os.environ["HDF5_VOL_CONNECTOR"] = "lowfive under_vol=0;under_info={};"
 
-if not os.path.exists(os.path.join(os.environ["HDF5_PLUGIN_PATH"], "liblowfive.dylib")):
+if not os.path.exists(os.path.join(os.environ["HDF5_PLUGIN_PATH"], "liblowfive.so")):
     raise RuntimeError("Bad HDF5_PLUGIN_PATH")
 
 import pyhenson as h
