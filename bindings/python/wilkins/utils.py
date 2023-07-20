@@ -7,7 +7,22 @@ def import_from(module, name):
     module = __import__(module, fromlist=[name])
     return getattr(module, name)
 
-def exec_stateful(puppets, myTasks, vol, wlk_consumer, pm, nm, io_proc):
+def get_passthru_lists(wilkins, passthruList):
+
+    pl_send = []
+    pl_recv  = []
+    for pl in passthruList:
+        prodName = pl.split(":")[0]
+        conName = pl.split(":")[1]
+        pl_val = passthruList.get(pl)
+        if wilkins.my_node(prodName):
+            pl_send.append(pl_val[0][0])
+        if wilkins.my_node(conName): #pl_val[i][0]: prodIndex, pl_val[i][1]: conIndex
+            pl_recv.append(pl_val[0][1])
+
+    return pl_send, pl_recv
+
+def exec_stateful(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl_con, pm, nm, io_proc):
     import pyhenson as h
     substitute_fn=-1
     task_args = puppets[myTasks[0]][1]
@@ -17,20 +32,28 @@ def exec_stateful(puppets, myTasks, vol, wlk_consumer, pm, nm, io_proc):
 
     myPuppet = h.Puppet(puppets[myTasks[0]][0], task_args, pm, nm)
 
-    #support for dynamic filenames
-    if substitute_fn!=-1 and io_proc==1:
+    if wlk_consumer!=-1:
         def scf_cb():
             fnames = vol.get_filenames(wlk_consumer)
+            if wlk_consumer in pl_con: #passthru requires extra signaling for prod to exit from serving
+                vol.send_done(wlk_consumer)
             print(f"{fnames = }")
             return fnames[0] #TODO: We can also return the latest one if we want.
+    if substitute_fn!=-1 or pl_con: #support for dynamic filenames or in passthru mode this works as a barrier
         vol.set_consumer_filename(scf_cb)
 
-    #TODO: passthru support
-    #wilkins.wait()
-    myPuppet.proceed()
-    #wilkins.commit()
+    if wlk_producer==1 and io_proc==1:
+        def afc_cb():
+            vol.serve_all(True, False)
+            vol.clear_files() #since keep set to True, need to clear files manually
+        if pl_prod: #if passthru, issue serve_all for get_filename to work at the consumer
+            vol.set_keep(True)
+            vol.set_after_file_close(afc_cb)
 
-def exec_stateless(puppets, myTasks, vol, wlk_consumer, wlk_producer, pm, nm):
+
+    myPuppet.proceed()
+
+def exec_stateless(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl_con, pm, nm):
     import pyhenson as h
     from collections import defaultdict
     substitute_fn = -1
@@ -43,7 +66,6 @@ def exec_stateless(puppets, myTasks, vol, wlk_consumer, wlk_producer, pm, nm):
         myPuppet = h.Puppet(puppets[myTasks[0]][0], task_args, pm, nm)
 
     #TODO: need to take into account the if io_proc==1:
-    #TODO: passthru support.
     if wlk_consumer!=-1:
         while True:
             fnames = []
@@ -64,9 +86,17 @@ def exec_stateless(puppets, myTasks, vol, wlk_consumer, wlk_producer, pm, nm):
                     #NB:run this in a for loop for each filename. Our flow control is orthogonal, user can skip some/latest iters.
                     #However, granularity within one iteration could be multiple files.
                     myPuppet.proceed()
+                    if wlk_consumer in pl_con: #passthru requires extra signaling
+                        vol.send_done(wlk_consumer)
             else:
                 vol.send_done(wlk_consumer)
                 break
     if wlk_producer==1:
+        def afc_cb():
+            vol.serve_all(True, False)
+            vol.clear_files() #since keep set to True, need to clear files manually
+        if pl_prod:  #if passthru, issue serve_all for get_filename to work at the consumer
+            vol.set_keep(True)
+            vol.set_after_file_close(afc_cb)
         myPuppet.proceed()
         vol.producer_done()
