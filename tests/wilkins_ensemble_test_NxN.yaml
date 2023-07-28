@@ -15,7 +15,7 @@ tasks:
   - taskCount: 3
     func: con-ensemble
     nprocs: 1
-    args: ["{filename}"]
+    args: ["1", "1", "{filename}"]
     inports:
       - filename: "*.h5"
         dsets:

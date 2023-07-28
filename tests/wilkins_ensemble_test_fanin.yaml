@@ -2,7 +2,7 @@ tasks:
   - taskCount: 4
     func: prod-ensemble
     nprocs: 1
-    args: ["1"]
+    args: ["3"]
     outports:
       - filename: "*.h5"
         dsets:
@@ -15,7 +15,7 @@ tasks:
   - taskCount: 2
     func: con-ensemble
     nprocs: 1
-    args: ["{filename}"]
+    args: ["3", "2", "{filename}"]
     inports:
       - filename: "*.h5"
         dsets:

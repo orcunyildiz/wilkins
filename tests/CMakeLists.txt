@@ -38,7 +38,8 @@ target_link_libraries       (prod-ensemble ${libraries})
 set_target_properties       (prod-ensemble PROPERTIES PREFIX "")
 set_target_properties       (prod-ensemble PROPERTIES SUFFIX ".hx")
 
-add_library                 (con-ensemble SHARED ../examples/lowfive/ensembles/consumer.cpp)
+#add_library                 (con-ensemble SHARED ../examples/lowfive/ensembles/consumer.cpp) #stateless consumer
+add_library                 (con-ensemble SHARED ../examples/lowfive/ensembles/consumer_stateful.cpp)
 target_link_libraries       (con-ensemble ${libraries})
 set_target_properties       (con-ensemble PROPERTIES PREFIX "")
 set_target_properties       (con-ensemble PROPERTIES SUFFIX ".hx")
@@ -68,8 +69,8 @@ add_test                (NAME cycle-memory
 #add_test                (NAME cycle-passthru
 #                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-cycle.sh ${CMAKE_CURRENT_BINARY_DIR} 1)
 
-#add_test                (NAME ensemble-fanin #Nx1 #TODO: enable once fixed
-#                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-ensemble.sh ${CMAKE_CURRENT_BINARY_DIR} 0)
+add_test                (NAME ensemble-fanin #Nx1
+                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-ensemble.sh ${CMAKE_CURRENT_BINARY_DIR} 0)
 
 add_test                (NAME ensemble-fanout #1xN
                         COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-ensemble.sh ${CMAKE_CURRENT_BINARY_DIR} 1)
