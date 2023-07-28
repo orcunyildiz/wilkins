@@ -7,7 +7,7 @@ import os
 #os.environ["HDF5_PLUGIN_PATH"] = "/Users/oyildiz/Work/software/lowfive/build/src"
 #os.environ["HDF5_VOL_CONNECTOR"] = "lowfive under_vol=0;under_info={};"
 
-if not os.path.exists(os.path.join(os.environ["HDF5_PLUGIN_PATH"], "liblowfive.so")):
+if not os.path.exists(os.path.join(os.environ["HDF5_PLUGIN_PATH"], "liblowfive.so")): #liblowfive.dylib
     raise RuntimeError("Bad HDF5_PLUGIN_PATH")
 
 import pyhenson as h
@@ -96,7 +96,7 @@ lowfive.create_logger("info")
 
 #orc@31-03: adding for the new control logic: consumer looping until there are files
 wlk_producer = -1
-wlk_consumer = -1
+wlk_consumer = [] #orc@25-07: making this an array for fanin cases as same consumer connected to multiple producer instances
 vol = None
 pl_prod     = []
 pl_con      = []
@@ -117,21 +117,16 @@ if io_proc==1:
     for prop in l5_props:
         #print(prop.filename, prop.dset, prop.producer, prop.consumer, prop.execGroup, prop.memory, prop.prodIndex, prop.conIndex, prop.zerocopy, prop.flowPolicy)
         if prop.memory==1: #TODO: L5 doesn't support both memory and passthru at the moment. This logic might change once L5 supports both modes.
-            if ensembles==1:#orc@18-07: TODO: temporary workaround for ensembles, see whether there is a better way.
-                vol.set_memory("*", "*")
-            else:
-                vol.set_memory(prop.filename, prop.dset)
+            vol.set_memory(prop.filename, prop.dset)
         else:
             vol.set_passthru(prop.filename, prop.dset)
             #orc@09-06: constructing the passthru list
             if not passthruList.get(prop.execGroup):
                 passthruList[prop.execGroup].append((prop.prodIndex, prop.conIndex))
         if prop.consumer==1 and not any(x in prop.execGroup for x in execGroup): #orc: setting single intercomm per execGroup.
-            if ensembles==1: #orc@18-07: TODO: temporary workaround for ensembles, see whether there is a better way.
-                vol.set_intercomm("*", "*", prop.conIndex)
-            else:
+            if ensembles!=1:
                 vol.set_intercomm(prop.filename, prop.dset, prop.conIndex)
-            wlk_consumer =  prop.conIndex
+            wlk_consumer.append(prop.conIndex)
             execGroup.append(prop.execGroup)
         if prop.producer==1: #NB: Task can be both producer and consumer.
             wlk_producer = 1
@@ -144,7 +139,6 @@ if io_proc==1:
             prodName = prop.execGroup.split(":")[0]
             flow_execGroup.append(prop.execGroup)
             flowPolicies[prodName].append((prop.flowPolicy, prop.prodIndex))
-
 
     def bsa_cb():
         return serve_indices
@@ -180,6 +174,6 @@ else:
     print("Nothing specified. Running stateless consumer")
 
 if stateful:
-    exec_stateful(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl_con, pm, nm, io_proc)
+    exec_stateful(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl_con, pm, nm, io_proc, ensembles)
 else:
-    exec_stateless(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl_con, pm, nm)
+    exec_stateless(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl_con, pm, nm, ensembles)

@@ -2,7 +2,7 @@ tasks:
   - taskCount: 2
     func: prod
     nprocs: 1
-    args: ["1"]
+    args: ["2"]
     outports:
       - filename: "*.h5"
         dsets:
@@ -12,10 +12,10 @@ tasks:
           - name: /group1/particles
             passthru: 0
             metadata: 1
-  - taskCount: 4
-    func: con
+  - taskCount: 1
+    func: con_sf
     nprocs: 1
-    args: ["{filename}"]
+    args: ["2", "2", "{filename}"]
     inports:
       - filename: "*.h5"
         dsets:

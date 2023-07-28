@@ -10,6 +10,11 @@ target_link_libraries       (con ${libraries})
 set_target_properties       (con PROPERTIES PREFIX "")
 set_target_properties       (con PROPERTIES SUFFIX ".hx")
 
+add_library                 (con_sf SHARED consumer_stateful.cpp)
+target_link_libraries       (con_sf ${libraries})
+set_target_properties       (con_sf PROPERTIES PREFIX "")
+set_target_properties       (con_sf PROPERTIES SUFFIX ".hx")
+
 if                          (NOT APPLE)
    set                      (linker_flags "-pie -Wl,--export-dynamic")
    set                      (linker_flags "${linker_flags} -Wl,-u,henson_set_contexts,-u,henson_set_namemap")
@@ -19,8 +24,9 @@ endif                       (NOT APPLE)
 
 set_target_properties    (prod         PROPERTIES LINK_FLAGS ${linker_flags})
 set_target_properties    (con          PROPERTIES LINK_FLAGS ${linker_flags})
+set_target_properties    (con_sf          PROPERTIES LINK_FLAGS ${linker_flags})
 
-install                     (TARGETS prod con
+install                     (TARGETS prod con con_sf
                             DESTINATION ${CMAKE_INSTALL_PREFIX}/examples/lowfive/ensembles/
                             PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
                             GROUP_READ GROUP_WRITE GROUP_EXECUTE

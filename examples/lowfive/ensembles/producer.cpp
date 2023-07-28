@@ -31,6 +31,7 @@ void producer_f (std::string prefix,
     // --- producer ranks running user task code  ---
     for (size_t i=0; i < iters; i++)
     {
+        sleep(1); //orc@28-07: adding sleep to generate diff random filenames (see below)
         // diy setup for the producer
         diy::FileStorage                prod_storage(prefix);
         diy::Master                     prod_master(local,

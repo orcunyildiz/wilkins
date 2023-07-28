@@ -22,7 +22,8 @@ def get_passthru_lists(wilkins, passthruList):
 
     return pl_send, pl_recv
 
-def exec_stateful(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl_con, pm, nm, io_proc):
+idx = 0
+def exec_stateful(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl_con, pm, nm, io_proc, ensembles):
     import pyhenson as h
     substitute_fn=-1
     task_args = puppets[myTasks[0]][1]
@@ -32,15 +33,22 @@ def exec_stateful(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl
 
     myPuppet = h.Puppet(puppets[myTasks[0]][0], task_args, pm, nm)
 
-    if wlk_consumer!=-1:
+    if wlk_consumer:
         def scf_cb():
-            fnames = vol.get_filenames(wlk_consumer)
-            if wlk_consumer in pl_con: #passthru requires extra signaling for prod to exit from serving
-                vol.send_done(wlk_consumer)
+            global idx
+            fnames = vol.get_filenames(wlk_consumer[idx])
+            if wlk_consumer[idx] in pl_con: #passthru requires extra signaling for prod to exit from serving
+                vol.send_done(wlk_consumer[idx])
             print(f"{fnames = }")
-            return fnames[0] #TODO: We can also return the latest one if we want.
-    if substitute_fn!=-1 or pl_con: #support for dynamic filenames or in passthru mode this works as a barrier
-        vol.set_consumer_filename(scf_cb)
+            if ensembles:
+                vol.set_intercomm(fnames[0], "*", wlk_consumer[idx])
+                idx = idx + 1
+                if idx==len(wlk_consumer):
+                    idx = 0
+            return fnames[0] #TODO: We can also return the latest one if we want.        
+
+        if substitute_fn!=-1 or pl_con: #support for dynamic filenames or in passthru mode this works as a barrier
+            vol.set_consumer_filename(scf_cb)
 
     if wlk_producer==1 and io_proc==1:
         def afc_cb():
@@ -50,10 +58,9 @@ def exec_stateful(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl
             vol.set_keep(True)
             vol.set_after_file_close(afc_cb)
 
-
     myPuppet.proceed()
 
-def exec_stateless(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl_con, pm, nm):
+def exec_stateless(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl_con, pm, nm, ensembles):
     import pyhenson as h
     from collections import defaultdict
     substitute_fn = -1
@@ -66,31 +73,35 @@ def exec_stateless(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, p
         myPuppet = h.Puppet(puppets[myTasks[0]][0], task_args, pm, nm)
 
     #TODO: need to take into account the if io_proc==1:
-    if wlk_consumer!=-1:
-        while True:
-            fnames = []
-            fnames = vol.get_filenames(wlk_consumer)
-            print(f"{fnames = }")
-            if fnames:
-                for i in range(len(fnames)):
-                    if substitute_fn!=-1: #orc@01-05: user requested dynamic filenames
-                        def scf_cb():
-                            return fnames[i] #TODO: We can also return the latest one if we want.
-                        vol.set_consumer_filename(scf_cb)
-                        fname = fnames[i]
-                        args_str = ' '.join(task_args)
-                        #NB: We can extend arg substitution for other args than filename as well (e.g., timesteps, with the dict user provides)
-                        args_str = args_str.format_map(defaultdict(str,filename=fname))
-                        curr_task_args = args_str.split()
-                        myPuppet = h.Puppet(puppets[myTasks[0]][0], curr_task_args, pm, nm)
-                    #NB:run this in a for loop for each filename. Our flow control is orthogonal, user can skip some/latest iters.
-                    #However, granularity within one iteration could be multiple files.
-                    myPuppet.proceed()
-                    if wlk_consumer in pl_con: #passthru requires extra signaling
-                        vol.send_done(wlk_consumer)
-            else:
-                vol.send_done(wlk_consumer)
-                break
+    if wlk_consumer:
+        while wlk_consumer:
+            for con_idx in wlk_consumer:
+                fnames = []
+                fnames = vol.get_filenames(con_idx)
+                print(f"{fnames = }")
+                if fnames:
+                    for i in range(len(fnames)):
+                        if substitute_fn!=-1: #orc@01-05: user requested dynamic filenames
+                            def scf_cb():
+                                if ensembles:
+                                    vol.set_intercomm(fnames[i], "*", con_idx)
+                                return fnames[i] #TODO: We can also return the latest one if we want.
+                            vol.set_consumer_filename(scf_cb)
+                            fname = fnames[i]
+                            args_str = ' '.join(task_args)
+                            #NB: We can extend arg substitution for other args than filename as well (e.g., timesteps, with the dict user provides)
+                            args_str = args_str.format_map(defaultdict(str,filename=fname))
+                            curr_task_args = args_str.split()
+                            myPuppet = h.Puppet(puppets[myTasks[0]][0], curr_task_args, pm, nm)
+                        #NB:run this in a for loop for each filename. Our flow control is orthogonal, user can skip some/latest iters.
+                        #However, granularity within one iteration could be multiple files.
+                        myPuppet.proceed()
+                        if con_idx in pl_con: #passthru requires extra signaling
+                            vol.send_done(con_idx)
+                else:
+                    vol.send_done(con_idx)
+                    wlk_consumer.remove(con_idx)
+
     if wlk_producer==1:
         def afc_cb():
             vol.serve_all(True, False)
