@@ -268,7 +268,6 @@ struct PointBlock
             size_t                              global_num_pts,
             size_t                              global_num_blks)
     {
-        // fmt::print("DEBUG: entering read_block_points.\n");
         herr_t              status;
         size_t              local_num_pts = points.size();
         std::vector<Point>  read_points(local_num_pts);         // points being read back
@@ -298,7 +297,6 @@ struct PointBlock
         {
             for (auto j = 0; j < DIM; j++)
             {
-                // fmt::print("DEBUG: j = {}.\n", j);
                 float min_val = cp.gid() * (global_num_pts / global_num_blks);
                 float max_val = min_val + read_points.size() - 1;
                 if (read_points[i][j] < min_val || read_points[i][j] > max_val)

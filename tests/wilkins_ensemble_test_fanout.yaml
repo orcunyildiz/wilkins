@@ -1,8 +1,8 @@
 tasks:
-  - func: prod-henson
-    start_proc: 0
+  - taskCount: 2
+    func: prod-ensemble
     nprocs: 1
-    args: ["1", "3", "90"]
+    args: ["1"]
     outports:
       - filename: "*.h5"
         dsets:
@@ -12,17 +12,16 @@ tasks:
           - name: /group1/particles
             passthru: 0
             metadata: 1
-  - func: con-henson
-    start_proc: 1
+  - taskCount: 4
+    func: con-ensemble
     nprocs: 1
-    args: ["1", "6", "{filename}"]
+    args: ["1", "1", "{filename}"]
     inports:
       - filename: "*.h5"
-        io_freq: 1
         dsets:
           - name: /group1/grid
-            passthru: 1
-            metadata: 0
+            passthru: 0
+            metadata: 1
           - name: /group1/particles
-            passthru: 1
-            metadata: 0
+            passthru: 0
+            metadata: 1

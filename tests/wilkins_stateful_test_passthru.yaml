@@ -1,21 +1,19 @@
 tasks:
-  - func: prod-henson
-    start_proc: 0
-    nprocs: 1
-    args: ["1", "3", "90"]
+  - func: prod-test
+    nprocs: 2
+    args: ["3"]
     outports:
       - filename: "*.h5"
         dsets:
           - name: /group1/grid
-            passthru: 0
-            metadata: 1
+            passthru: 1
+            metadata: 0
           - name: /group1/particles
-            passthru: 0
-            metadata: 1
-  - func: con-henson
-    start_proc: 1
-    nprocs: 1
-    args: ["1", "6", "{filename}"]
+            passthru: 1
+            metadata: 0
+  - func: con-test
+    nprocs: 3
+    args: ["3", "{filename}"]
     inports:
       - filename: "*.h5"
         io_freq: 1

@@ -6,6 +6,11 @@ target_link_libraries       (prod-henson ${libraries})
 set_target_properties       (prod-henson PROPERTIES PREFIX "")
 set_target_properties       (prod-henson PROPERTIES SUFFIX ".hx")
 
+add_library                 (middle SHARED middle.cpp)
+target_link_libraries       (middle ${libraries})
+set_target_properties       (middle PROPERTIES PREFIX "")
+set_target_properties       (middle PROPERTIES SUFFIX ".hx")
+
 add_library                 (con-henson SHARED con-henson.cpp)
 target_link_libraries       (con-henson ${libraries})
 set_target_properties       (con-henson PROPERTIES PREFIX "")
@@ -34,12 +39,13 @@ else                        ()
 endif                       (NOT APPLE)
 
 set_target_properties    (prod-henson         PROPERTIES LINK_FLAGS ${linker_flags})
+set_target_properties    (middle              PROPERTIES LINK_FLAGS ${linker_flags})
 set_target_properties    (con-henson          PROPERTIES LINK_FLAGS ${linker_flags})
 set_target_properties    (prod1-henson        PROPERTIES LINK_FLAGS ${linker_flags})
 set_target_properties    (con1-henson         PROPERTIES LINK_FLAGS ${linker_flags})
 set_target_properties    (con2-henson         PROPERTIES LINK_FLAGS ${linker_flags})
 
-install                     (TARGETS prod-henson prod1-henson con-henson con1-henson con2-henson
+install                     (TARGETS prod-henson prod1-henson middle con-henson con1-henson con2-henson
                             DESTINATION ${CMAKE_INSTALL_PREFIX}/examples/lowfive/flow-control/stateful/
                             PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
                             GROUP_READ GROUP_WRITE GROUP_EXECUTE
@@ -50,3 +56,23 @@ install                     (FILES wilkins_prod_con.yaml wilkins_prod_con_single
                             PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
                             GROUP_READ GROUP_WRITE GROUP_EXECUTE
                             WORLD_READ WORLD_WRITE WORLD_EXECUTE)
+
+# Copy benchmark.py to the installation directory
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/benchmark.py
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/examples/lowfive/flow-control/stateful/
+        PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
+        GROUP_READ GROUP_WRITE GROUP_EXECUTE
+        WORLD_READ WORLD_WRITE WORLD_EXECUTE)
+
+# Copy benchmark.yaml to the installation directory
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/benchmark.yaml
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/examples/lowfive/flow-control/stateful/
+        PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
+        GROUP_READ GROUP_WRITE GROUP_EXECUTE
+        WORLD_READ WORLD_WRITE WORLD_EXECUTE)
+# Copy benchmark.sh to the installation directory
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/benchmark.sh
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/examples/lowfive/flow-control/stateful/
+        PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
+        GROUP_READ GROUP_WRITE GROUP_EXECUTE
+        WORLD_READ WORLD_WRITE WORLD_EXECUTE)

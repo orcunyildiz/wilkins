@@ -1,0 +1,15 @@
+tasks:
+  - func: source
+    nprocs: 1
+    sleep: 5
+    particle: 1000000
+
+  - func: sink
+    nprocs: 1
+    sleep: 20
+
+  - func: intermediate
+    number of intermediate: 2
+    nprocs: [1,1]
+    sleep: [10,15]
+    particle: [1000000,1000000]

@@ -1,5 +1,5 @@
 #include    <thread>
-#include    <chrono> 
+
 #include    <diy/master.hpp>
 #include    <diy/decomposition.hpp>
 #include    <diy/assigner.hpp>
@@ -15,67 +15,43 @@ using diy_comm = diy::mpi::communicator;
 
 #include <string>
 
-void consumer_f (int sleep_duration,
-                 std::string prefix,
-                 int input,
+void consumer_f (std::string prefix,
                  int threads, int mem_blocks,
-                 int con_nblocks, int iters)
+                 int con_nblocks, int iters, int producers, communicator local)
 {
 
     fmt::print("Entered consumer\n");
 
-    communicator local = MPI_COMM_WORLD;
     diy::mpi::communicator local_(local);
-    std::string inputfile = "outfile_" + std::to_string(input) + ".h5";
-
-
 
     // --- consumer ranks running user task code ---
-    //orc@31-01: adding looping to test the flow control
-    for (size_t i=0; i < iters; i++)
+    //orc@28-07: stateful consumer may aggregate input coming from multiple producers in fan-in
+    for (size_t i=0; i < iters*producers; i++)
     {
-        // input = input + i;
-        inputfile = "outfile_" + std::to_string(input) + ".h5";
 
-        auto start = std::chrono::steady_clock::now();
-        hid_t file        = H5Fopen(inputfile.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-        fmt::print("Opened File name: {}\n", inputfile.c_str());
-        // hid_t dset_grid   = H5Dopen(file, "/group1/grid", H5P_DEFAULT);
-        // hid_t dspace_grid = H5Dget_space(dset_grid);
-        fmt::print("test 0.0v\n");
+        hid_t plist = H5Pcreate(H5P_FILE_ACCESS);
+        H5Pset_fapl_mpio(plist, local, MPI_INFO_NULL);
+
+        hid_t file        = H5Fopen("outfile.h5", H5F_ACC_RDONLY, plist);
+        hid_t dset_grid   = H5Dopen(file, "/group1/grid", H5P_DEFAULT);
+        hid_t dspace_grid = H5Dget_space(dset_grid);
+
         hid_t dset_particles   = H5Dopen(file, "/group1/particles", H5P_DEFAULT);
         hid_t dspace_particles = H5Dget_space(dset_particles);
-        fmt::print("test 0.1v\n");
-
-        // // get global domain bounds
-        // int dim = H5Sget_simple_extent_ndims(dspace_grid);
-        // Bounds domain { dim };
-        // {
-        //     std::vector<hsize_t> min_(dim), max_(dim);
-        //     H5Sget_select_bounds(dspace_grid, min_.data(), max_.data());
-        //     for (int i = 0; i < dim; ++i)
-        //     {
-        //         domain.min[i] = min_[i];
-        //         domain.max[i] = max_[i];
-        //     }
-        // }
-        // fmt::print(stderr, "Consumer Read domain: {} {}\n", domain.min, domain.max);
 
         // get global domain bounds
-        int dspace_dim = H5Sget_simple_extent_ndims(dspace_particles);  // 2d [particle id][coordinate id]
-        std::vector<hsize_t> min_(dspace_dim), max_(dspace_dim);
-        H5Sget_select_bounds(dspace_particles, min_.data(), max_.data());
-        // fmt::print(stderr, "Dataspace extent: [{}] [{}]\n", fmt::join(min_, ","), fmt::join(max_, ","));
-        int dim = max_[dspace_dim - 1] + 1;                             // 3d (extent of coordinate ids)
+        int dim = H5Sget_simple_extent_ndims(dspace_grid);
         Bounds domain { dim };
         {
+            std::vector<hsize_t> min_(dim), max_(dim);
+            H5Sget_select_bounds(dspace_grid, min_.data(), max_.data());
             for (int i = 0; i < dim; ++i)
             {
-                domain.min[i] = 0;
-                domain.max[i] = 10;
+                domain.min[i] = min_[i];
+                domain.max[i] = max_[i];
             }
         }
-        // fmt::print(stderr, "Consumer Read domain: {} {}\n", domain.min, domain.max);
+        fmt::print(stderr, "Read domain: {} {}\n", domain.min, domain.max);
 
         // get global number of particles
         size_t global_num_points;
@@ -84,7 +60,7 @@ void consumer_f (int sleep_duration,
             H5Sget_select_bounds(dspace_particles, min_.data(), max_.data());
             global_num_points = max_[0] + 1;
         }
-        fmt::print(stderr, "Consumer Input Global num points from {}: {}\n", inputfile.c_str(), global_num_points);
+        fmt::print(stderr, "Global num points: {}\n", global_num_points);
 
         // diy setup for the consumer task on the consumer side
         diy::FileStorage                con_storage(prefix);
@@ -96,50 +72,33 @@ void consumer_f (int sleep_duration,
             &con_storage,
             &Block::save,
             &Block::load);
-
         size_t local_num_points = global_num_points / con_nblocks;
-
         AddBlock                        con_create(con_master, local_num_points, global_num_points, con_nblocks);
         diy::ContiguousAssigner         con_assigner(local_.size(), con_nblocks);
         diy::RegularDecomposer<Bounds>  con_decomposer(dim, domain, con_nblocks);
         con_decomposer.decompose(local_.rank(), con_assigner, con_create);
-        
-        // // read the grid data
-        // con_master.foreach([&](Block* b, const diy::Master::ProxyWithLink& cp)
-        //     { b->read_block_grid(cp, dset_grid); });
 
-        // Verify the number of blocks in the con_master object
-        // fmt::print("Number of blocks in con_master: {}\n", con_master.size());
-        // fmt::print("local_num_points: {}\n", local_num_points);
-        // fmt::print("con_nblocks: {}\n", con_nblocks);
+        // read the grid data
+        con_master.foreach([&](Block* b, const diy::Master::ProxyWithLink& cp)
+            { b->read_block_grid(cp, dset_grid); });
 
         // read the particle data
-        // fmt::print("DEBUG: before read function\n");
         con_master.foreach([&](Block* b, const diy::Master::ProxyWithLink& cp)
             { b->read_block_points(cp, dset_particles, global_num_points, con_nblocks); });
-        // fmt::print("DEBUG: after read function\n");
-        // // clean up
-        // H5Dclose(dset_grid);
-        // H5Sclose(dspace_grid);
+
+        // clean up
+        H5Sclose(dspace_grid);
         H5Sclose(dspace_particles);
+        H5Dclose(dset_grid);
         H5Dclose(dset_particles);
         H5Fclose(file);
+        H5Pclose(plist);
 
-        auto end = std::chrono::steady_clock::now();  // End timer
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-
-        // Print the timing information
-        fmt::print("Consumer H5Fcreate to H5Fclose Time: {} ms\n", duration);
-
-        //adding sleep here to emulate (2x) slow consumer
-        fmt::print("Sleep {} seconds for consumers\n", sleep_duration);
-        sleep(sleep_duration);
     }
 }
 
 int main(int argc, char* argv[])
 {
-    auto start = std::chrono::steady_clock::now();
 
     int   dim = DIM;
 
@@ -147,16 +106,16 @@ int main(int argc, char* argv[])
 
     diy::mpi::communicator    world;
 
-    // communicator local;
-    // MPI_Comm_dup(world, &local);
+    communicator local;
+    MPI_Comm_dup(world, &local);
 
     int iters         = 2;
     iters             = atoi(argv[1]);
-    int sleep_duration = atoi(argv[2]);
-    int input = atoi(argv[3]);
-    // int producer_count = atoi(argv[4]);
 
-    fmt::print("Halo from consumer with looping for {} iters\n", iters);
+    int producers         = 1;
+    producers             = atoi(argv[2]);
+
+    fmt::print("Halo from consumer with looping for {} iters connected to {} producers\n", iters, producers);
 
     int                       global_nblocks    = world.size();   // global number of blocks
 
@@ -195,16 +154,7 @@ int main(int argc, char* argv[])
     // producer also needs to know this number so it can match collective operations
     int con_nblocks = pow(2, dim) * global_nblocks;
 
-    consumer_f(sleep_duration, prefix, input, threads, mem_blocks, con_nblocks, iters);
+    consumer_f(prefix, threads, mem_blocks, con_nblocks, iters, producers, local);
 
     MPI_Finalize();
-
-    auto end = std::chrono::steady_clock::now();  // End timer
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-
-    // Print the timing information
-    fmt::print("Consumer Task Time: {} ms\n", duration);
-
-
-
 }
