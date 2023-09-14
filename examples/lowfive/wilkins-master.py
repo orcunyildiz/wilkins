@@ -1,4 +1,4 @@
-#Usage: mpirun -n $nprocs python wlk_flow_control.py config_file
+#Usage: mpirun -n $nprocs python wilkins-master.py config_file
 #config_files= [wilkins_prod_con.yaml, wilkins_prod_2cons.yaml]
 
 import os
@@ -7,7 +7,7 @@ import os
 #os.environ["HDF5_PLUGIN_PATH"] = "/Users/oyildiz/Work/software/lowfive/build/src"
 #os.environ["HDF5_VOL_CONNECTOR"] = "lowfive under_vol=0;under_info={};"
 
-if not os.path.exists(os.path.join(os.environ["HDF5_PLUGIN_PATH"], "liblowfive.so")):
+if not os.path.exists(os.path.join(os.environ["HDF5_PLUGIN_PATH"], "liblowfive.so")): #liblowfive.dylib
     raise RuntimeError("Bad HDF5_PLUGIN_PATH")
 
 import pyhenson as h
@@ -54,7 +54,7 @@ def flow_control(vol, comm, intercomms, serve_indices, flowPolicies):
 
     vol.set_serve_indices(bsa_cb)
 
-from wilkins.utils import import_from
+from wilkins.utils import*
 
 #orc@22-11: adding the wlk py bindings
 from wilkins import pywilkins as w
@@ -72,12 +72,15 @@ myTasks    = []
 puppets    = []
 actions    = []
 i = 0
+ensembles = 0
 for node in workflow.nodes:
     procs_yaml.append((node.func, node.nprocs))
     task_exec = "./" + node.func  + ".hx"; #TODO: This can be an extra field in the YAML file if needed.
     puppets.append((task_exec, node.args))
     if node.actions:
         actions.append((node.func, node.actions))
+    if node.taskCount > 1:
+        ensembles = 1
     #bookkeping of tasks belonging to the execution group
     if rank>=node.start_proc and rank < node.start_proc + node.nprocs:
         myTasks.append(i)
@@ -93,9 +96,10 @@ lowfive.create_logger("info")
 
 #orc@31-03: adding for the new control logic: consumer looping until there are files
 wlk_producer = -1
-wlk_consumer = -1
+wlk_consumer = [] #orc@25-07: making this an array for fanin cases as same consumer connected to multiple producer instances
 vol = None
-
+pl_prod     = []
+pl_con      = []
 #NB: In some cases, L5 comms should only include subset of processes (e.g., rank 0 from LPS)
 io_proc = wilkins.is_io_proc()
 if io_proc==1:
@@ -108,6 +112,7 @@ if io_proc==1:
     set_si = 0
     from collections import defaultdict
     flowPolicies = defaultdict(list) #key: prodName value: (flowPolicy, intercomm index)
+    passthruList = defaultdict(list) #key: execGroup value: (prodIndex, conIndex) #orc@09-06: added for passthru support
     flow_execGroup    = []
     for prop in l5_props:
         #print(prop.filename, prop.dset, prop.producer, prop.consumer, prop.execGroup, prop.memory, prop.prodIndex, prop.conIndex, prop.zerocopy, prop.flowPolicy)
@@ -115,9 +120,13 @@ if io_proc==1:
             vol.set_memory(prop.filename, prop.dset)
         else:
             vol.set_passthru(prop.filename, prop.dset)
+            #orc@09-06: constructing the passthru list
+            if not passthruList.get(prop.execGroup):
+                passthruList[prop.execGroup].append((prop.prodIndex, prop.conIndex))
         if prop.consumer==1 and not any(x in prop.execGroup for x in execGroup): #orc: setting single intercomm per execGroup.
-            vol.set_intercomm(prop.filename, prop.dset, prop.conIndex)
-            wlk_consumer =  prop.conIndex
+            if ensembles!=1:
+                vol.set_intercomm(prop.filename, prop.dset, prop.conIndex)
+            wlk_consumer.append(prop.conIndex)
             execGroup.append(prop.execGroup)
         if prop.producer==1: #NB: Task can be both producer and consumer.
             wlk_producer = 1
@@ -130,7 +139,6 @@ if io_proc==1:
             prodName = prop.execGroup.split(":")[0]
             flow_execGroup.append(prop.execGroup)
             flowPolicies[prodName].append((prop.flowPolicy, prop.prodIndex))
-
 
     def bsa_cb():
         return serve_indices
@@ -152,6 +160,9 @@ if io_proc==1:
             cb =  import_from(file_name, cb_func) 
             cb(vol, rank)  #NB: For more advanced callbacks with args, users would need to write their own wilkins.py 
 
+    #orc@09-06: determining the mode.
+    pl_prod, pl_con = get_passthru_lists(wilkins, passthruList)
+
 #TODO: Add the logic for TP mode when L5 supports it (simply iterate thru myTasks)
 stateful = False
 
@@ -163,9 +174,6 @@ else:
     print("Nothing specified. Running stateless consumer")
 
 if stateful:
-    from wilkins.utils import exec_stateful
-    exec_stateful(puppets, myTasks, vol, wlk_consumer, pm, nm, io_proc)
+    exec_stateful(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl_con, pm, nm, io_proc, ensembles)
 else:
-    from wilkins.utils import exec_stateless
-    exec_stateless(puppets, myTasks, vol, wlk_consumer, wlk_producer, pm, nm)
-
+    exec_stateless(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl_con, pm, nm, ensembles)

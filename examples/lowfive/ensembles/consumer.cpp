@@ -24,8 +24,6 @@ void consumer_f (std::string prefix,
 
     diy::mpi::communicator local_(local);
 
-    //adding sleep here to emulate (2x) slow consumer.
-    sleep(10);
     hid_t plist = H5Pcreate(H5P_FILE_ACCESS);
     H5Pset_fapl_mpio(plist, local, MPI_INFO_NULL);
     hid_t file        = H5Fopen("outfile.h5", H5F_ACC_RDONLY, plist);
@@ -88,8 +86,7 @@ void consumer_f (std::string prefix,
     H5Dclose(dset_grid);
     H5Dclose(dset_particles);
     H5Fclose(file);
-    H5Pclose(plist);
-
+    //H5Pclose(plist);
 }
 
 int main(int argc, char* argv[])

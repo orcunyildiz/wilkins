@@ -19,12 +19,11 @@ void consumer_f (int sleep_duration,
                  std::string prefix,
                  int input,
                  int threads, int mem_blocks,
-                 int con_nblocks, int iters)
+                 int con_nblocks, int iters, communicator local)
 {
 
     fmt::print("Entered consumer\n");
 
-    communicator local = MPI_COMM_WORLD;
     diy::mpi::communicator local_(local);
     std::string inputfile = "outfile_" + std::to_string(input) + ".h5";
 
@@ -34,15 +33,34 @@ void consumer_f (int sleep_duration,
     //orc@31-01: adding looping to test the flow control
     for (size_t i=0; i < iters; i++)
     {
+
         // input = input + i;
         inputfile = "outfile_" + std::to_string(input) + ".h5";
 
         auto start = std::chrono::steady_clock::now();
-        hid_t file        = H5Fopen(inputfile.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-        fmt::print("Opened File name: {}\n", inputfile.c_str());
+
+        hid_t plist = H5Pcreate(H5P_FILE_ACCESS);
+        H5Pset_fapl_mpio(plist, local, MPI_INFO_NULL);
+        hid_t file  = H5Fopen(inputfile.c_str(), H5F_ACC_RDONLY, plist);
+
+
+
+
+        // hid_t file        = H5Fopen(inputfile.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+        // fmt::print("Opened File name: {}\n", inputfile.c_str());
         // hid_t dset_grid   = H5Dopen(file, "/group1/grid", H5P_DEFAULT);
         // hid_t dspace_grid = H5Dget_space(dset_grid);
-        fmt::print("test 0.0v\n");
+        // fmt::print("test 0.0v\n");
+
+
+        // //adding sleep here to emulate (2x) slow consumer
+        // sleep(10);
+
+
+        // hid_t dset_grid   = H5Dopen(file, "/group1/grid", H5P_DEFAULT);
+        // hid_t dspace_grid = H5Dget_space(dset_grid);
+
+// >>>>>>> f9913d18778a3f9e682d46e6d916d0f03152a40f
         hid_t dset_particles   = H5Dopen(file, "/group1/particles", H5P_DEFAULT);
         hid_t dspace_particles = H5Dget_space(dset_particles);
         fmt::print("test 0.1v\n");
@@ -124,6 +142,8 @@ void consumer_f (int sleep_duration,
         H5Sclose(dspace_particles);
         H5Dclose(dset_particles);
         H5Fclose(file);
+        H5Pclose(plist);
+
 
         auto end = std::chrono::steady_clock::now();  // End timer
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
@@ -134,6 +154,10 @@ void consumer_f (int sleep_duration,
         //adding sleep here to emulate (2x) slow consumer
         fmt::print("Sleep {} seconds for consumers\n", sleep_duration);
         sleep(sleep_duration);
+
+
+
+
     }
 }
 
@@ -147,8 +171,13 @@ int main(int argc, char* argv[])
 
     diy::mpi::communicator    world;
 
+// <<<<<<< HEAD
     // communicator local;
     // MPI_Comm_dup(world, &local);
+// =======
+    communicator local;
+    MPI_Comm_dup(world, &local);
+// >>>>>>> f9913d18778a3f9e682d46e6d916d0f03152a40f
 
     int iters         = 2;
     iters             = atoi(argv[1]);
@@ -195,7 +224,11 @@ int main(int argc, char* argv[])
     // producer also needs to know this number so it can match collective operations
     int con_nblocks = pow(2, dim) * global_nblocks;
 
+// <<<<<<< HEAD
     consumer_f(sleep_duration, prefix, input, threads, mem_blocks, con_nblocks, iters);
+// =======
+//     consumer_f(prefix, threads, mem_blocks, con_nblocks, iters, local);
+// >>>>>>> f9913d18778a3f9e682d46e6d916d0f03152a40f
 
     MPI_Finalize();
 

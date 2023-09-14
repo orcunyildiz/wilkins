@@ -71,9 +71,16 @@ void producer_f (int sleep_duration,
         // }
 
 
+
         
         auto start = std::chrono::steady_clock::now();
-        hid_t file = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+        // hid_t file = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+
+        hid_t plist = H5Pcreate(H5P_FILE_ACCESS);
+        H5Pset_fapl_mpio(plist, local, MPI_INFO_NULL);
+        hid_t file = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, plist);
+
+
         hid_t group = H5Gcreate(file, "/group1", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
         std::vector<hsize_t> domain_cnts(DIM);
@@ -111,6 +118,7 @@ void producer_f (int sleep_duration,
         H5Sclose(filespace);
         H5Gclose(group);
         H5Fclose(file);
+        H5Pclose(plist);
 
         auto end = std::chrono::steady_clock::now();  // End timer
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
@@ -120,6 +128,9 @@ void producer_f (int sleep_duration,
 
         fmt::print("Sleep {} seconds for producer\n", sleep_duration);
         sleep(sleep_duration);
+
+
+
     }
 
 }
@@ -133,8 +144,10 @@ int main(int argc, char* argv[])
     MPI_Init(NULL, NULL);
 
     diy::mpi::communicator    world;
-
-    communicator local = MPI_COMM_WORLD;
+    //orc@12-06: for plist to work, duplicating comm here
+    communicator local;
+    MPI_Comm_dup(world, &local);
+    //communicator local = MPI_COMM_WORLD;
     diy::mpi::communicator local_(local);
     int nwriters      = local_.size();
 

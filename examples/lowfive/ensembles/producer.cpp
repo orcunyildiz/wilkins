@@ -14,7 +14,9 @@ using communicator = MPI_Comm;
 using diy_comm = diy::mpi::communicator;
 
 #include <string>
-
+#include <random>
+#include <ctime>
+#include <unistd.h>
 // --- ranks of producer task ---
 void producer_f (std::string prefix,
                  int threads, int mem_blocks,
@@ -27,11 +29,10 @@ void producer_f (std::string prefix,
     diy::mpi::communicator local_(local);
 
     // --- producer ranks running user task code  ---
-    //orc@31-01: adding looping to test the flow control
     for (size_t i=0; i < iters; i++)
     {
+        sleep(1); //orc@28-07: adding sleep to generate diff random filenames (see below)
         // diy setup for the producer
-        sleep(5);
         diy::FileStorage                prod_storage(prefix);
         diy::Master                     prod_master(local,
             threads,
@@ -56,8 +57,15 @@ void producer_f (std::string prefix,
         }
         else
         {
-            fmt::print("producer generating different files over timesteps\n");
-            filename = "outfile_" +  std::to_string(i) + ".h5";
+            //orc@20-06: for ensembles, generating random filenames instead
+            srand((time(NULL) & 0xFFFF) | (getpid() << 16));
+            int min = 1;
+            int max = 100;
+            int range = max - min + 1;
+            int num = rand() % range + min;
+            //filename = "outfile_" +  std::to_string(i+1) + ".h5";
+            filename = "outfile_" +  std::to_string(num) + ".h5";
+            fmt::print("producer generating different files over timesteps and filename is {}\n", filename.c_str());
         }
 
 
