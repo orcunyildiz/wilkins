@@ -1,5 +1,5 @@
 #include    <thread>
-
+#include    <chrono>  
 #include    <diy/master.hpp>
 #include    <diy/decomposition.hpp>
 #include    <diy/assigner.hpp>
@@ -16,7 +16,8 @@ using diy_comm = diy::mpi::communicator;
 #include <string>
 
 // --- ranks of producer task ---
-void producer_f (std::string prefix,
+void producer_f (int sleep_duration, 
+                 std::string prefix,
                  int threads, int mem_blocks,
                  Bounds domain,
                  int global_nblocks, int dim, size_t local_num_points, int iters, bool single_file, communicator local)
@@ -26,12 +27,17 @@ void producer_f (std::string prefix,
 
     diy::mpi::communicator local_(local);
 
+    int rank;
+    MPI_Comm_rank(local, &rank);
+
+
+
     // --- producer ranks running user task code  ---
     //orc@31-01: adding looping to test the flow control
     for (size_t i=0; i < iters; i++)
     {
         // diy setup for the producer
-        sleep(5);
+
         diy::FileStorage                prod_storage(prefix);
         diy::Master                     prod_master(local,
             threads,
@@ -55,37 +61,46 @@ void producer_f (std::string prefix,
         }
         else
         {
-            fmt::print("producer generating different files over timesteps\n");
-            filename = "outfile_" +  std::to_string(i) + ".h5";
+            filename = "outfile_" + std::to_string(i) + ".h5";
+            fmt::print("producer generating different files over timesteps and filename is {}\n", filename.c_str());
         }
+        // else
+        // {
+        //     fmt::print("producer generating different files over timesteps\n");
+        //     filename = "outfile_" +  std::to_string(i) + ".h5";
+        // }
 
+
+        
+        auto start = std::chrono::steady_clock::now();
         hid_t file = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
         hid_t group = H5Gcreate(file, "/group1", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
         std::vector<hsize_t> domain_cnts(DIM);
-        for (auto i = 0; i < DIM; i++)
-            domain_cnts[i]  = domain.max[i] - domain.min[i] + 1;
+        // for (auto i = 0; i < DIM; i++)
+        //     domain_cnts[i]  = domain.max[i] - domain.min[i] + 1;
 
-        // create the file data space for the global grid
-        hid_t filespace = H5Screate_simple(DIM, &domain_cnts[0], NULL);
+        // // create the file data space for the global grid
+        // hid_t filespace = H5Screate_simple(DIM, &domain_cnts[0], NULL);
 
-        // create the grid dataset with default properties
-        hid_t dset = H5Dcreate2(group, "grid", H5T_IEEE_F32LE, filespace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-        // write the grid data
-        prod_master.foreach([&](Block* b, const diy::Master::ProxyWithLink& cp)
-            { b->write_block_grid(cp, dset); });
+        // // create the grid dataset with default properties
+        // hid_t dset = H5Dcreate2(group, "grid", H5T_IEEE_F32LE, filespace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        // // // write the grid data
+        // prod_master.foreach([&](Block* b, const diy::Master::ProxyWithLink& cp)
+        //     { b->write_block_grid(cp, dset); });
 
-        // clean up
-        H5Dclose(dset);
-        H5Sclose(filespace);
+        // // clean up
+        // H5Dclose(dset);
+        // H5Sclose(filespace);
+
 
         // create the file data space for the particles
         domain_cnts[0]  = global_num_points;
         domain_cnts[1]  = DIM;
-        filespace = H5Screate_simple(2, &domain_cnts[0], NULL);
+        hid_t filespace = H5Screate_simple(2, &domain_cnts[0], NULL);
 
         // create the particle dataset with default properties
-        dset = H5Dcreate2(group, "particles", H5T_IEEE_F32LE, filespace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        hid_t dset = H5Dcreate2(group, "particles", H5T_IEEE_F32LE, filespace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
         // write the particle data
         prod_master.foreach([&](Block* b, const diy::Master::ProxyWithLink& cp)
@@ -96,12 +111,22 @@ void producer_f (std::string prefix,
         H5Sclose(filespace);
         H5Gclose(group);
         H5Fclose(file);
+
+        auto end = std::chrono::steady_clock::now();  // End timer
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+
+        // Print the timing information
+        fmt::print("Producer H5Fcreate to H5Fclose Time: {} ms\n", duration);
+
+        fmt::print("Sleep {} seconds for producer\n", sleep_duration);
+        sleep(sleep_duration);
     }
 
 }
 
 int main(int argc, char* argv[])
 {
+    auto start = std::chrono::steady_clock::now();
 
     int   dim = DIM;
 
@@ -115,15 +140,17 @@ int main(int argc, char* argv[])
 
     int iters         = 2;
     iters             = atoi(argv[1]);
+    int sleep_duration = atoi(argv[2]);
 
-    fmt::print("Halo from producer with looping for {} iterations\n", iters);
+    fmt::print("Halo from producer with looping for {} iters\n", iters);
 
     int                       global_nblocks    = world.size();   // global number of blocks
 
     int                       mem_blocks        = -1;             // all blocks in memory
     int                       threads           = 1;              // no multithreading
     std::string               prefix            = "./DIY.XXXXXX"; // for saving block files out of core
-    size_t                    local_npoints     = 100;            // points per block
+    size_t                    local_npoints     = atoi(argv[3]);            // points per block
+    fmt::print("Producer Setting {} points per block\n", local_npoints);
 
     // default global data bounds
     Bounds domain { dim };
@@ -183,13 +210,23 @@ int main(int argc, char* argv[])
         bool writer = local_.rank() < nwriters;
         MPI_Comm_split(local, writer ? 0 : 1, 0, &writers);
         if (local_.rank() < nwriters)
-            producer_f(prefix, threads, mem_blocks, domain, global_nblocks, dim, local_npoints, iters, single_file, writers);
+            producer_f(sleep_duration, prefix, threads, mem_blocks, domain, global_nblocks, dim, local_npoints, iters, single_file, writers);
     }
     else
     {
-        producer_f(prefix, threads, mem_blocks, domain, global_nblocks, dim, local_npoints, iters, single_file, local);
+        producer_f(sleep_duration, prefix, threads, mem_blocks, domain, global_nblocks, dim, local_npoints, iters, single_file, local);
     }
 
     MPI_Finalize();
+
+
+    auto end = std::chrono::steady_clock::now();  // End timer
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+
+    // Print the timing information
+    fmt::print("Producer Task Time: {} ms\n", duration);
+
+
+
 
 }
