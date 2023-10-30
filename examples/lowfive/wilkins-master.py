@@ -7,7 +7,7 @@ import os
 #os.environ["HDF5_PLUGIN_PATH"] = "/Users/oyildiz/Work/software/lowfive/build/src"
 #os.environ["HDF5_VOL_CONNECTOR"] = "lowfive under_vol=0;under_info={};"
 
-if not os.path.exists(os.path.join(os.environ["HDF5_PLUGIN_PATH"], "liblowfive.so")): #liblowfive.dylib
+if not os.path.exists(os.path.join(os.environ["HDF5_PLUGIN_PATH"], "liblowfive.so")): #liblowfive.dylib #liblowfive.so
     raise RuntimeError("Bad HDF5_PLUGIN_PATH")
 
 import pyhenson as h
@@ -92,7 +92,7 @@ nm = h.NameMap()
 a = MPI._addressof(MPI.COMM_WORLD)
 wilkins = w.Wilkins(a,config_file)
 
-lowfive.create_logger("info")
+lowfive.create_logger("info") #trace #info
 
 #orc@31-03: adding for the new control logic: consumer looping until there are files
 wlk_producer = -1
@@ -100,6 +100,7 @@ wlk_consumer = [] #orc@25-07: making this an array for fanin cases as same consu
 vol = None
 pl_prod     = []
 pl_con      = []
+serve_indices = []
 #NB: In some cases, L5 comms should only include subset of processes (e.g., rank 0 from LPS)
 io_proc = wilkins.is_io_proc()
 if io_proc==1:
@@ -108,7 +109,6 @@ if io_proc==1:
     vol = lowfive.create_DistMetadataVOL(comm, intercomms)
     l5_props = wilkins.set_lowfive()
     execGroup         = []
-    serve_indices = []
     set_si = 0
     from collections import defaultdict
     flowPolicies = defaultdict(list) #key: prodName value: (flowPolicy, intercomm index)
@@ -164,16 +164,19 @@ if io_proc==1:
     pl_prod, pl_con = get_passthru_lists(wilkins, passthruList)
 
 #TODO: Add the logic for TP mode when L5 supports it (simply iterate thru myTasks)
-stateful = False
+exec_task(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl_con, pm, nm, io_proc, ensembles, serve_indices)
 
-if '-s' in sys.argv:
-    stateful = True
-    sys.argv.remove('-s')
-    print("Running stateful consumer")
-else:
-    print("Nothing specified. Running stateless consumer")
+#orc: deprecated as using exec_task to run both stateful&stateless tasks.
+#stateful = False
 
-if stateful:
-    exec_stateful(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl_con, pm, nm, io_proc, ensembles)
-else:
-    exec_stateless(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl_con, pm, nm, ensembles)
+#if '-s' in sys.argv:
+#    stateful = True
+#    sys.argv.remove('-s')
+#    print("Running stateful consumer")
+#else:
+#    print("Nothing specified. Running stateless consumer")
+
+#if stateful:
+#    exec_stateful(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl_con, pm, nm, io_proc, ensembles, serve_indices)
+#else:
+#    exec_stateless(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl_con, pm, nm, ensembles)

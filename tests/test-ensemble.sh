@@ -15,16 +15,16 @@ cp con-ensemble.hx con-ensemble_3.hx
 
 if [ $topology == 0 ]
 then
-    echo "mpirun -n 6 -l python -u wilkins-master.py wilkins_ensemble_test_fanin.yaml -s"
-    mpirun -n 6 -l python -u ../../examples/lowfive/wilkins-master.py ../../tests/wilkins_ensemble_test_fanin.yaml -s
+    echo "mpirun -n 12 -l python -u wilkins-master.py wilkins_ensemble_test_fanin.yaml"
+    mpirun -n 12 -l python -u ../../examples/lowfive/wilkins-master.py ../../tests/wilkins_ensemble_test_fanin.yaml
 elif [ $topology == 1 ]
 then
-    echo "mpirun -n 6 -l python -u wilkins-master.py wilkins_ensemble_test_fanout.yaml -s"
-    mpirun -n 6 -l python -u ../../examples/lowfive/wilkins-master.py ../../tests/wilkins_ensemble_test_fanout.yaml -s
+    echo "mpirun -n 12 -l python -u wilkins-master.py wilkins_ensemble_test_fanout.yaml"
+    mpirun -n 12 -l python -u ../../examples/lowfive/wilkins-master.py ../../tests/wilkins_ensemble_test_fanout.yaml
 elif [ $topology == 2 ]
 then 
-    echo "mpirun -n 6 -l python -u wilkins-master.py wilkins_ensembl_test_NxN.yaml -s"
-    mpirun -n 6 -l python -u ../../examples/lowfive/wilkins-master.py ../../tests/wilkins_ensemble_test_NxN.yaml -s
+    echo "mpirun -n 12 -l python -u wilkins-master.py wilkins_ensembl_test_NxN.yaml"
+    mpirun -n 12 -l python -u ../../examples/lowfive/wilkins-master.py ../../tests/wilkins_ensemble_test_NxN.yaml
 fi
 
 retval=$?

@@ -63,8 +63,9 @@ set_target_properties    (con-ensemble      PROPERTIES LINK_FLAGS ${linker_flags
 
 # ------------ test cycle (node 0 -> node 1 -> node 2 -> node 0) ------------------
 
-add_test                (NAME cycle-memory
-                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-cycle.sh ${CMAKE_CURRENT_BINARY_DIR} 0)
+#TODO: enable it back one L5 has serve_indices cb enabled for producer_done
+#add_test                (NAME cycle-memory
+#                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-cycle.sh ${CMAKE_CURRENT_BINARY_DIR} 0)
 
 #add_test                (NAME cycle-passthru
 #                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-cycle.sh ${CMAKE_CURRENT_BINARY_DIR} 1)

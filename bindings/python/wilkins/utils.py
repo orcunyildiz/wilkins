@@ -23,8 +23,85 @@ def get_passthru_lists(wilkins, passthruList):
     return pl_send, pl_recv
 
 idx = 0
+def exec_task(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl_con, pm, nm, io_proc, ensembles, serve_indices):
+    import pyhenson as h
+    substitute_fn=-1
+    task_args = puppets[myTasks[0]][1]
+    for i in range(len(task_args)):
+        if '{filename}' in task_args[i]:
+            substitute_fn = i
+
+    myPuppet = h.Puppet(puppets[myTasks[0]][0], task_args, pm, nm)
+
+    if wlk_consumer:
+        def scf_cb():
+            global idx
+            if ensembles:
+                import time  #TODO: think on a better workaround for fanout.
+                time.sleep(3) #NB: this is again in fanout, fast consumer might fetch the old file name from prev iter in multiple iters #you run into problems at serve_all in producer
+            fnames = vol.get_filenames(wlk_consumer[idx])
+            if wlk_consumer[idx] in pl_con: #passthru requires extra signaling for prod to exit from serving
+                vol.send_done(wlk_consumer[idx])
+            print(f"{fnames = }")
+            if ensembles:
+                vol.set_intercomm(fnames[0], "*", wlk_consumer[idx])
+                idx = idx + 1
+                if idx==len(wlk_consumer):
+                    idx = 0
+            return fnames[0] #TODO: We can also return the latest one if we want.        
+
+        if substitute_fn!=-1 or pl_con: #support for dynamic filenames or in passthru mode this works as a barrier
+            vol.set_consumer_filename(scf_cb)
+
+    if wlk_producer==1 and io_proc==1:
+        def afc_cb():
+            vol.serve_all(True, False)
+            vol.clear_files() #since keep set to True, need to clear files manually
+        if pl_prod: #if passthru, issue serve_all for get_filename to work at the consumer
+            vol.set_keep(True)
+            vol.set_after_file_close(afc_cb)
+
+    myPuppet.proceed()
+
+    #this is to resolve deadlock in a cycle where there are multiple tasks as both producers and consumers
+    prodFirst = 0
+    prodDone = 0
+    if wlk_producer==1 and wlk_consumer:
+        if serve_indices[0] < wlk_consumer[0]:
+            prodFirst = 1
+
+    if wlk_producer==1 and io_proc==1:
+        if wlk_consumer:
+            if prodFirst:
+                vol.producer_done()
+                prodDone = 1
+        else:
+            vol.producer_done()
+            prodDone = 1
+
+    if wlk_consumer:
+        while wlk_consumer:
+            for con_idx in wlk_consumer:
+                fnames = []
+                if ensembles: #There might be files in the producer still consuming by the other consumer tasks in the fan-out scenario
+                    import time
+                    time.sleep(3) #to resolve the race condition in fan-out topology.
+                fnames = vol.get_filenames(con_idx)
+                print(f"{fnames = }")
+                if fnames: #more data to consume
+                   myPuppet.proceed()
+                else:
+                   vol.send_done(con_idx)
+                   wlk_consumer.remove(con_idx)
+
+    #if producer hasn't issued a done signal yet (for cycle topology)
+    if wlk_producer==1 and not prodDone:
+        vol.producer_done()
+
+#deprecated
 def exec_stateful(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl_con, pm, nm, io_proc, ensembles):
     import pyhenson as h
+    print("Warning: Using a deprecated function to run stateful consumers.")
     substitute_fn=-1
     task_args = puppets[myTasks[0]][1]
     for i in range(len(task_args)):
@@ -60,9 +137,11 @@ def exec_stateful(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl
 
     myPuppet.proceed()
 
+#deprecated
 def exec_stateless(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl_con, pm, nm, ensembles):
     import pyhenson as h
     from collections import defaultdict
+    print("Warning: Using a deprecated function to run stateless consumers.")
     substitute_fn = -1
     task_args = puppets[myTasks[0]][1]
     for i in range(len(task_args)):
