@@ -21,7 +21,7 @@ using diy_comm = diy::mpi::communicator;
 void producer_f (std::string prefix,
                  int threads, int mem_blocks,
                  Bounds domain,
-                 int global_nblocks, int dim, size_t local_num_points, int iters, bool single_file, communicator local)
+                 int global_nblocks, int dim, size_t local_num_points, int iters, bool single_file, communicator local, std::string exec_name)
 {
 
     fmt::print("Entered producer\n");
@@ -57,14 +57,13 @@ void producer_f (std::string prefix,
         }
         else
         {
-            //orc@20-06: for ensembles, generating random filenames instead
-            srand((time(NULL) & 0xFFFF) | (getpid() << 16));
-            int min = 1;
-            int max = 100;
-            int range = max - min + 1;
-            int num = rand() % range + min;
-            //filename = "outfile_" +  std::to_string(i+1) + ".h5";
-            filename = "outfile_" +  std::to_string(num) + ".h5";
+            //orc@20-06: for ensembles, generating different filenames for each instance
+            std::string start_delim = "/";
+            std::string stop_delim = ".";
+            unsigned first = exec_name.find(start_delim);
+            unsigned last = exec_name.find_last_of(stop_delim);
+            std::string preDlm = exec_name.substr (first+1,last-first-1);
+            filename = preDlm + std::to_string(i+1) + ".h5";
             fmt::print("producer generating different files over timesteps and filename is {}\n", filename.c_str());
         }
 
@@ -188,7 +187,8 @@ int main(int argc, char* argv[])
 
     size_t global_npoints = global_nblocks * local_npoints;         // all block have same number of points
 
-    producer_f(prefix, threads, mem_blocks, domain, global_nblocks, dim, local_npoints, iters, single_file, local);
+    std::string exec_name = argv[0];
+    producer_f(prefix, threads, mem_blocks, domain, global_nblocks, dim, local_npoints, iters, single_file, local, exec_name);
 
     MPI_Finalize();
 
