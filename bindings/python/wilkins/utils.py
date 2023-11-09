@@ -63,6 +63,12 @@ def exec_task(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl_con
 
     myPuppet.proceed()
 
+    #setting serve_indices again for the producer_done (which could be set before in flow_control causing problems) 
+    def bsa_cb():
+        return serve_indices
+
+    vol.set_serve_indices(bsa_cb)
+
     #this is to resolve deadlock in a cycle where there are multiple tasks as both producers and consumers
     prodFirst = 0
     prodDone = 0
