@@ -21,6 +21,7 @@ import lowfive
 serve_counter = 0
 def flow_control(vol, comm, intercomms, serve_indices, flowPolicies):
     def bsa_cb():
+        comm.barrier()
         global serve_counter
         import sys
         indices = []
