@@ -49,7 +49,7 @@ spack install wilkins
 - Python 3.8 or higher
 - CMake 3.9 or higher
 - [LowFive](https://github.com/diatomic/LowFive) 
-- [HDF5](https://www.hdfgroup.org/solutions/hdf5/) version 1.12.0 or higher
+- [HDF5](https://www.hdfgroup.org/solutions/hdf5/) version 1.14
 - [zlib](https://www.zlib.net/)
 - [Henson](https://github.com/henson-insitu/henson)
 

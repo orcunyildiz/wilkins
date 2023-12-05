@@ -20,12 +20,11 @@ class Wilkins(CMakePackage):
     #url      = "/Users/oyildiz/Work/software/wilkins"
     #git      = "/Users/oyildiz/Work/software/wilkins"
 
-    #version('master', branch='master') #TODO: shift to master once henson branch is merged
-    version('henson', branch='henson')
+    version('master', branch='master')
 
     depends_on('mpich') #TODO: keeping it mpich for now as L5 does so, but should switch to mpi later
     depends_on('lowfive@master')
-    depends_on('hdf5+mpi+hl@1.12.1 ^mpich', type='link')
+    depends_on('hdf5+mpi+hl@1.14 ^mpich', type='link')
     depends_on('henson@master+python+mpi-wrappers')
 
     extends("python")
