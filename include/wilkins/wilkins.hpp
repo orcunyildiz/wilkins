@@ -8,6 +8,7 @@
 #include <dlfcn.h>
 #include <map>
 #include <string>
+#include <cstring>
 #include <regex>
 #include <vector>
 #include <algorithm>
