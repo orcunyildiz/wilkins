@@ -1,10 +1,10 @@
 # Wilkins
-Wilkins is an in situ workflow system for triple convergence of HPC, Big Data, and AI applications. 
-Wilkins provides a data-centric API for defining the workflow graph, creates and launches tasks, establishes communicators between the tasks. 
+Wilkins is an in situ workflow system that enables heterogenous task specification and execution for in situ data processing.
+Wilkins provides a data-centric API for defining the workflow graph, creating and launching tasks, establishing communicators between the tasks. 
 As its data transport layer, Wilkins uses [LowFive](https://github.com/diatomic/LowFive) library, which is based on the [HDF5](https://www.hdfgroup.org/solutions/hdf5/) data model.
 Wilkins allows coupled tasks to communicate both in situ using in-memory data and MPI message passing, and through traditional HDF5 files.
 Minimal and often no source-code modification is needed for programs that already use HDF5.
-Wilkins supports several workflow graph topologies such as pipeline, fan-in, fan-out, ensembles of tasks, and cycles. 
+Wilkins supports any directed-graph topology of tasks, including common patterns such as pipeline, fan-in, fan-out, ensembles of tasks, and cycles.
 
 # Installation
 
@@ -101,5 +101,20 @@ cd /path/to/wilkins/install/examples/lowfive/cycle
 
 cd /path/to/wilkins/install/examples/lowfive/flow-control/stateful
 ./run_stateful.sh
+
+```
+
+# Using Wilkins in your own project
+
+To execute the user task codes with Wilkins, first you would need to link them with [Henson](https://github.com/henson-insitu/henson/) as it serves as the execution model of Wilkins. You can refer to the lines 32-46 at Wilkins' main CMake [file](https://github.com/orcunyildiz/wilkins/blob/master/CMakeLists.txt) for this step. 
+
+Second, the task codes need to be compiled as position-independent codes. This requires giving the ```-fPIE``` flag to the compilers. Also, CMake automatically adds this option if ```CMAKE_POSITION_INDEPENDENT_CODE``` is set to ```ON```.
+
+Third, Henson requires some specific linker flags. You would need to add ```-pie -Wl,--export-dynamic``` and ```-Wl,-u,henson_set_contexts,-u,henson_set_namemap``` as linker flags. Please refer to the CMake of the simple examples for this step such as the lines 18-23 at this CMake [file](https://github.com/orcunyildiz/wilkins/blob/master/examples/lowfive/cycle/CMakeLists.txt).
+
+After building the task codes as shared objects and linking them with Henson, you can execute them with the ```wilkins-master.py```, which is the workflow driver code. ```spack load wilkins``` places this driver code in the ```PATH``` automatically. Sample command is given below which uses 4 MPI ranks to execute the workflow description provided in the workflow configuration file. For sample configuration files, please refer to the simple workflow examples provided in this repository.
+
+```
+mpirun -n 4 python wilkins-master.py config.yaml
 
 ```
