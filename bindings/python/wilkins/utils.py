@@ -54,7 +54,7 @@ def exec_task(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl_con
             vol.set_consumer_filename(scf_cb)
 
     if wlk_producer==1 and io_proc==1:
-        def afc_cb():
+        def afc_cb(name):
             vol.serve_all(True, False)
             vol.clear_files() #since keep set to True, need to clear files manually
         if pl_prod: #if passthru, issue serve_all for get_filename to work at the consumer
@@ -134,7 +134,7 @@ def exec_stateful(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl
             vol.set_consumer_filename(scf_cb)
 
     if wlk_producer==1 and io_proc==1:
-        def afc_cb():
+        def afc_cb(name):
             vol.serve_all(True, False)
             vol.clear_files() #since keep set to True, need to clear files manually
         if pl_prod: #if passthru, issue serve_all for get_filename to work at the consumer
@@ -188,7 +188,7 @@ def exec_stateless(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, p
                     wlk_consumer.remove(con_idx)
 
     if wlk_producer==1:
-        def afc_cb():
+        def afc_cb(name):
             vol.serve_all(True, False)
             vol.clear_files() #since keep set to True, need to clear files manually
         if pl_prod:  #if passthru, issue serve_all for get_filename to work at the consumer
