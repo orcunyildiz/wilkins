@@ -193,6 +193,6 @@ def exec_stateless(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, p
             vol.clear_files() #since keep set to True, need to clear files manually
         if pl_prod:  #if passthru, issue serve_all for get_filename to work at the consumer
             vol.set_keep(True)
-            vol.set_after_file_close(afc_cb)
+#             vol.set_after_file_close(afc_cb)
         myPuppet.proceed()
         vol.producer_done()
