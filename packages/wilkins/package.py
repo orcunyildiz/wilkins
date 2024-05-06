@@ -21,6 +21,7 @@ class Wilkins(CMakePackage):
     #git      = "/Users/oyildiz/Work/software/wilkins"
 
     version('master', branch='master')
+    version('tom-dev', branch='tom-dev')
 
     depends_on('mpich') #TODO: keeping it mpich for now as L5 does so, but should switch to mpi later
     depends_on('lowfive@master')
