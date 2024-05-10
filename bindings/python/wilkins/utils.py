@@ -164,7 +164,9 @@ def exec_stateless(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, p
         while wlk_consumer:
             for con_idx in wlk_consumer:
                 fnames = []
-                fnames = vol.get_filenames(con_idx)
+                all_fnames = vol.get_filenames(con_idx)
+                if all_fnames:
+       	       	    fnames.append(all_fnames[-1]) #using the latest file.
                 print(f"{fnames = }")
                 if fnames:
                     for i in range(len(fnames)):
