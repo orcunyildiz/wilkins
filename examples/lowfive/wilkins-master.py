@@ -106,6 +106,7 @@ serve_indices = []
 io_proc = wilkins.is_io_proc()
 if io_proc==1:
     comm = w.get_local_comm(wilkins)
+    local_rank = comm.Get_rank()
     intercomms = w.get_intercomms(wilkins)
     vol = lowfive.create_DistMetadataVOL(comm, intercomms)
     l5_props = wilkins.set_lowfive()
@@ -159,7 +160,7 @@ if io_proc==1:
             file_name = action[1][0]
             cb_func   = action[1][1]
             cb =  import_from(file_name, cb_func) 
-            cb(vol, rank)  #NB: For more advanced callbacks with args, users would need to write their own wilkins.py 
+            cb(vol, local_rank)  #NB: For more advanced callbacks with args, users would need to write their own wilkins.py 
 
     #orc@09-06: determining the mode.
     pl_prod, pl_con = get_passthru_lists(wilkins, passthruList)
