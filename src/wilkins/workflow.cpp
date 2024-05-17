@@ -205,7 +205,6 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
 
         for (std::size_t i=0;i<nodes.size();i++)
         {
-
             //orc@08-03: adding the subgraph API
             int index = 0;
 
@@ -289,8 +288,9 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
                         const YAML::Node& dsets = inports[j]["dsets"];
                         for (std::size_t k=0;k<dsets.size();k++)
                         {
-                            string full_path = filename + "/" + dsets[k]["name"].as<std::string>();
-                            string full_path_orig = filename_orig + "/" + dsets[k]["name"].as<std::string>();
+                            string dset = dsets[k]["name"].as<std::string>();
+                            string full_path = filename + "/" + dset;
+                            string full_path_orig = filename_orig + "/" + dset;
 
                             //NB: first check whether there is a match before inserting with a different key (e.g., regex scenarios, out*.h5, outfile.h5)
                             int found = 0;
@@ -330,6 +330,7 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
                             LowFivePort l5_port;
                             l5_port.name      = full_path;
                             l5_port.filename  = filename;
+                            l5_port.dset      = dset;
                             l5_port.passthru  = passthru;
                             l5_port.metadata  = metadata;
                             l5_port.io_freq   = io_freq;
@@ -371,8 +372,9 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
                             int passthru  = 0;
                             int metadata  = 1;
 
-                            string full_path = filename + "/" + dsets[k]["name"].as<std::string>();
-                            string full_path_orig = filename_orig + "/" + dsets[k]["name"].as<std::string>();
+                            string dset = dsets[k]["name"].as<std::string>();
+                            string full_path = filename + "/" + dset;
+                            string full_path_orig = filename_orig + "/" + dset;
 
                             //NB: first check whether there is a match before inserting with a different key (e.g., regex scenarios, out*.h5, outfile.h5)
                             int found = 0;
@@ -400,8 +402,9 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
                                 exit(1);
                             }
 
-			                l5_port.name      = full_path;
+			    l5_port.name      = full_path;
                             l5_port.filename  = filename;
+                            l5_port.dset      = dset;
                             l5_port.zerocopy  = zerocopy;
                             l5_port.passthru  = passthru;
                             l5_port.metadata  = metadata;
@@ -436,18 +439,63 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
                 }
             }
 
-            int quot = (idx_prod.size() < idx_con.size()) ? idx_con.size()/idx_prod.size() : idx_prod.size() /idx_con.size();
-
-            //iterating through the larger one
-            if (idx_prod.size() <= idx_con.size())
+            //skip generating links (e.g., producer reading input file from disk, consumer writing output to disk--no coupling required)
+            if (idx_prod.size()==0 || idx_con.size()==0)
             {
-               generateLinks(idx_con, idx_prod, quot, workflow, k, l, 0);
+                if ( idx_prod.size()==0 ) // producer reading input file from disk
+                {
+
+                    for (LowFivePort inPort : workflow.nodes[idx_con[0]].l5_inports)
+                    {
+                        if ( match(k.c_str(), inPort.name.c_str()))
+                        {
+                            string fname = inPort.filename;
+                            string dset = inPort.dset;
+                            if (inPort.metadata)
+                            {
+                                fprintf(stderr, "ERROR: No matching link found for the inport %s%s requesting memory mode. Please use the file mode or specify a matching outport.\n",fname.c_str(), dset.c_str());
+                                exit(1);
+                            }
+                            workflow.nodes[idx_con[0]].passthru_files.push_back(make_pair(fname, dset));
+                        }
+                    }
+
+                }
+                else // consumer writing output file to disk
+                {
+
+                    for (LowFivePort outPort : workflow.nodes[-idx_prod[0]].l5_outports)
+                    {
+                     	if ( match(k.c_str(), outPort.name.c_str()))
+                        {
+                            string fname = outPort.filename;
+                            string dset = outPort.dset;
+                            if (outPort.metadata)
+                            {
+                                fprintf(stderr, "ERROR: No matching link found for the outport %s%s requesting memory mode. Please use the file mode or specify a matching inport.\n", fname.c_str(), dset.c_str());
+                                exit(1);
+                            }
+                            workflow.nodes[-idx_prod[0]].passthru_files.push_back(make_pair(fname, dset));
+                        }
+                    }
+
+
+                }
             }
             else
             {
-               generateLinks(idx_prod, idx_con, quot, workflow, k, l, 1);
-            }
+                int quot = (idx_prod.size() < idx_con.size()) ? idx_con.size()/idx_prod.size() : idx_prod.size() /idx_con.size();
 
+                //iterating through the larger one
+                if (idx_prod.size() <= idx_con.size())
+                {
+                    generateLinks(idx_con, idx_prod, quot, workflow, k, l, 0);
+                }
+                else
+                {
+                    generateLinks(idx_prod, idx_con, quot, workflow, k, l, 1);
+                }
+            }
         }
 
     }

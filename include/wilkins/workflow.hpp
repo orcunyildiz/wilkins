@@ -30,6 +30,7 @@ struct LowFivePort
 {
     string name;
     string filename;
+    string dset;
     int zerocopy;
     int passthru;
     int metadata;
@@ -60,6 +61,9 @@ struct WorkflowNode                          /// a producer or consumer
     //vector<string> outports;    ///< output ports, if available //orc@08-12: deprecated, using l5_outports instead
     vector<LowFivePort> l5_inports;     ///< input ports, if available
     vector<LowFivePort> l5_outports;    ///< output ports, if available
+
+    vector<pair<string, string>> passthru_files;             ///< all the files without links (e.g., producer reading input file from disk)
+
     //int passthru;                   ///< "lowfive: write file to disk" //orc@08-12: deprecated as LowFive properties are moved to dset level
     //int metadata;                   ///< "lowfive: build and use in-memory metadata" //orc@08-12: deprecated as LowFive properties are moved to dset level
     void add_out_link(int link);
@@ -94,6 +98,7 @@ struct Workflow                              /// an entire workflow
         links(links_)                             {}
     vector<WorkflowNode> nodes;             ///< all the workflow nodes
     vector<WorkflowLink> links;             ///< all the workflow links
+
     bool my_node(int proc, int node);       ///< whether my process is part of this node
 
     bool my_in_link(int proc, int link);    ///< whether my process gets input data from this link

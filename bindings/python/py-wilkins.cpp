@@ -110,6 +110,7 @@ PYBIND11_MODULE(pywilkins, m)
         .def_readwrite("func", &WorkflowNode::func)
         .def_readwrite("args", &WorkflowNode::args)
         .def_readwrite("actions", &WorkflowNode::actions)
+        .def_readwrite("passthru_files", &WorkflowNode::passthru_files)
     ;
 
     py::class_<Workflow>(m, "Workflow")

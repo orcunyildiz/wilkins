@@ -72,6 +72,7 @@ procs_yaml = []
 myTasks    = []
 puppets    = []
 actions    = []
+passthru_files = []
 i = 0
 ensembles = 0
 for node in workflow.nodes:
@@ -85,6 +86,7 @@ for node in workflow.nodes:
     #bookkeping of tasks belonging to the execution group
     if rank>=node.start_proc and rank < node.start_proc + node.nprocs:
         myTasks.append(i)
+        passthru_files = node.passthru_files
     i = i+1
 
 pm = h.ProcMap(world, procs_yaml)
@@ -116,6 +118,9 @@ if io_proc==1:
     flowPolicies = defaultdict(list) #key: prodName value: (flowPolicy, intercomm index)
     passthruList = defaultdict(list) #key: execGroup value: (prodIndex, conIndex) #orc@09-06: added for passthru support
     flow_execGroup    = []
+    #support for reading/writing files from/to disk (without matching links)
+    for pf in passthru_files:
+        vol.set_passthru(pf[0], pf[1])
     for prop in l5_props:
         #print(prop.filename, prop.dset, prop.producer, prop.consumer, prop.execGroup, prop.memory, prop.prodIndex, prop.conIndex, prop.zerocopy, prop.flowPolicy)
         if prop.memory==1: #TODO: L5 doesn't support both memory and passthru at the moment. This logic might change once L5 supports both modes.
