@@ -445,40 +445,44 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
                 if ( idx_prod.size()==0 ) // producer reading input file from disk
                 {
 
-                    for (LowFivePort inPort : workflow.nodes[idx_con[0]].l5_inports)
+                    for (const auto idx : idx_con)
                     {
-                        if ( match(k.c_str(), inPort.name.c_str()))
-                        {
-                            string fname = inPort.filename;
-                            string dset = inPort.dset;
-                            if (inPort.metadata)
-                            {
-                                fprintf(stderr, "ERROR: No matching link found for the inport %s%s requesting memory mode. Please use the file mode or specify a matching outport.\n",fname.c_str(), dset.c_str());
-                                exit(1);
-                            }
-                            workflow.nodes[idx_con[0]].passthru_files.push_back(make_pair(fname, dset));
-                        }
+                    	for (LowFivePort inPort : workflow.nodes[idx].l5_inports)
+                    	{
+                        	if ( match(k.c_str(), inPort.name.c_str()))
+                        	{
+                            	    string fname = inPort.filename;
+                            	    string dset = inPort.dset;
+                            	    if (inPort.metadata)
+                            	    {
+                                        fprintf(stderr, "ERROR: No matching link found for the inport %s%s requesting memory mode. Please use the file mode or specify a matching outport.\n",fname.c_str(), dset.c_str());
+                                        exit(1);
+                            	    }
+                            	    workflow.nodes[idx].passthru_files.push_back(make_pair(fname, dset));
+                        	}
+                    	}
                     }
-
                 }
                 else // consumer writing output file to disk
                 {
 
-                    for (LowFivePort outPort : workflow.nodes[-idx_prod[0]].l5_outports)
+                    for (const auto idx : idx_prod)
                     {
-                     	if ( match(k.c_str(), outPort.name.c_str()))
-                        {
-                            string fname = outPort.filename;
-                            string dset = outPort.dset;
-                            if (outPort.metadata)
-                            {
-                                fprintf(stderr, "ERROR: No matching link found for the outport %s%s requesting memory mode. Please use the file mode or specify a matching inport.\n", fname.c_str(), dset.c_str());
-                                exit(1);
-                            }
-                            workflow.nodes[-idx_prod[0]].passthru_files.push_back(make_pair(fname, dset));
-                        }
+                    	for (LowFivePort outPort : workflow.nodes[-idx].l5_outports)
+                    	{
+                     		if ( match(k.c_str(), outPort.name.c_str()))
+                        	{
+                            	    string fname = outPort.filename;
+                            	    string dset = outPort.dset;
+                            	    if (outPort.metadata)
+                            	    {
+                                	fprintf(stderr, "ERROR: No matching link found for the outport %s%s requesting memory mode. Please use the file mode or specify a matching inport.\n", fname.c_str(), dset.c_str());
+                                	exit(1);
+                            	    }
+                            	    workflow.nodes[-idx].passthru_files.push_back(make_pair(fname, dset));
+                        	}
+                    	}
                     }
-
 
                 }
             }
