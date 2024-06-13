@@ -77,7 +77,7 @@ i = 0
 ensembles = 0
 for node in workflow.nodes:
     procs_yaml.append((node.func, node.nprocs))
-    task_exec = "./" + node.func  + ".hx"; #TODO: This can be an extra field in the YAML file if needed.
+    task_exec = node.func #"./" + node.func  + ".hx"; #TODO: This can be an extra field in the YAML file if needed.
     puppets.append((task_exec, node.args))
     if node.actions:
         actions.append((node.func, node.actions))
@@ -170,10 +170,16 @@ if io_proc==1:
     #orc@09-06: determining the mode.
     pl_prod, pl_con = get_passthru_lists(wilkins, passthruList)
 
-#TODO: Add the logic for TP mode when L5 supports it (simply iterate thru myTasks)
-exec_task(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl_con, pm, nm, io_proc, ensembles, serve_indices)
+onlinePassthru = False
+if '-o' in sys.argv:
+    onlinePassthru = True
+    sys.argv.remove('-o')
+    print("Providing onlinePassthru support")
+
+exec_task(wilkins, puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl_con, pm, nm, io_proc, ensembles, serve_indices, onlinePassthru)
 
 #orc: deprecated as using exec_task to run both stateful&stateless tasks.
+#TODO: Add the logic for TP mode when L5 supports it (simply iterate thru myTasks)
 #stateful = False
 
 #if '-s' in sys.argv:

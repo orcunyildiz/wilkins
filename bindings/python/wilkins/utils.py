@@ -1,3 +1,5 @@
+import sys
+
 #orc@25-01: adding support for defining callback actions externally via YAML file
 def import_from(module, name):
     from importlib.util import find_spec
@@ -23,7 +25,7 @@ def get_passthru_lists(wilkins, passthruList):
     return pl_send, pl_recv
 
 idx = 0
-def exec_task(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl_con, pm, nm, io_proc, ensembles, serve_indices):
+def exec_task(wilkins, puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl_con, pm, nm, io_proc, ensembles, serve_indices, onlinePassthru):
     import pyhenson as h
     substitute_fn=-1
     task_args = puppets[myTasks[0]][1]
@@ -48,20 +50,26 @@ def exec_task(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl_con
                 idx = idx + 1
                 if idx==len(wlk_consumer):
                     idx = 0
-            return fnames[0] #TODO: We can also return the latest one if we want.        
+            return fnames[-1]
 
-        if substitute_fn!=-1 or pl_con: #support for dynamic filenames or in passthru mode this works as a barrier
+        if substitute_fn!=-1 or onlinePassthru and pl_con: #support for dynamic filenames or in passthru mode this works as a barrier
             vol.set_consumer_filename(scf_cb)
 
     if wlk_producer==1 and io_proc==1:
         def afc_cb(name):
             vol.serve_all(True, False)
             vol.clear_files() #since keep set to True, need to clear files manually
-        if pl_prod: #if passthru, issue serve_all for get_filename to work at the consumer
+        if pl_prod and onlinePassthru: #if passthru, issue serve_all for get_filename to work at the consumer
             vol.set_keep(True)
             vol.set_after_file_close(afc_cb)
 
+    if not onlinePassthru:
+        wilkins.wait()
+
     myPuppet.proceed()
+
+    if not onlinePassthru:
+        wilkins.commit()
 
     #setting serve_indices again for the producer_done (which could be set before in flow_control causing problems) 
     def bsa_cb():
@@ -128,7 +136,7 @@ def exec_stateful(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl
                 idx = idx + 1
                 if idx==len(wlk_consumer):
                     idx = 0
-            return fnames[0] #TODO: We can also return the latest one if we want.        
+            return fnames[-1]
 
         if substitute_fn!=-1 or pl_con: #support for dynamic filenames or in passthru mode this works as a barrier
             vol.set_consumer_filename(scf_cb)
@@ -162,7 +170,9 @@ def exec_stateless(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, p
         while wlk_consumer:
             for con_idx in wlk_consumer:
                 fnames = []
-                fnames = vol.get_filenames(con_idx)
+                all_fnames = vol.get_filenames(con_idx)
+                if all_fnames:
+       	       	    fnames.append(all_fnames[-1]) #using the latest file.
                 print(f"{fnames = }")
                 if fnames:
                     for i in range(len(fnames)):
