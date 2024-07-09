@@ -2,13 +2,14 @@
 #config_files= [wilkins_prod_con.yaml, wilkins_prod_2cons.yaml]
 
 import os
+from glob import glob
 
 #NB: Assuming that user has these env set either i)after spack installation or ii)sourcing vol-plugin.sh explicitly
 #os.environ["HDF5_PLUGIN_PATH"] = "/Users/oyildiz/Work/software/lowfive/build/src"
 #os.environ["HDF5_VOL_CONNECTOR"] = "lowfive under_vol=0;under_info={};"
 
-if not os.path.exists(os.path.join(os.environ["HDF5_PLUGIN_PATH"], "liblowfive.so")): #liblowfive.dylib #liblowfive.so
-    raise RuntimeError("Bad HDF5_PLUGIN_PATH")
+if not glob(os.path.join(os.environ["HDF5_PLUGIN_PATH"], "liblowfive.*")):
+    raise RuntimeError("Bad HDF5_PLUGIN_PATH, lowfive library not found")
 
 import pyhenson as h
 import sys
