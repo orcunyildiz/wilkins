@@ -9,6 +9,15 @@ def import_from(module, name):
     module = __import__(module, fromlist=[name])
     return getattr(module, name)
 
+def get_script_name(script_name):
+    if script_name.startswith("./"):
+        script_name = script_name[2:]
+    
+    if script_name.endswith(".py"):
+        script_name = script_name[:-3]
+    
+    return script_name
+
 def get_passthru_lists(wilkins, passthruList):
 
     pl_send = []
@@ -33,7 +42,13 @@ def exec_task(wilkins, puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_pro
         if '{filename}' in task_args[i]:
             substitute_fn = i
 
-    myPuppet = h.Puppet(puppets[myTasks[0]][0], task_args, pm, nm)
+    myPuppet = None
+    pythonPuppet = False
+    exec_name = puppets[myTasks[0]][0]
+    if exec_name.endswith(".py"):
+        pythonPuppet = True
+    else:
+        myPuppet = h.Puppet(puppets[myTasks[0]][0], task_args, pm, nm)
 
     if wlk_consumer:
         def scf_cb():
@@ -66,7 +81,13 @@ def exec_task(wilkins, puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_pro
     if not onlinePassthru:
         wilkins.wait()
 
-    myPuppet.proceed()
+    if pythonPuppet:
+        import importlib
+        script_name = get_script_name(exec_name)
+        py_script = importlib.import_module(script_name)
+        py_script.main(task_args)
+    else:
+        myPuppet.proceed()
 
     if not onlinePassthru:
         wilkins.commit()
@@ -103,7 +124,10 @@ def exec_task(wilkins, puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_pro
                 fnames = vol.get_filenames(con_idx)
                 print(f"{fnames = }")
                 if fnames: #more data to consume
-                   myPuppet.proceed()
+                   if pythonPuppet:
+                       py_script.main(task_args)
+                   else:
+                       myPuppet.proceed()
                 else:
                    vol.send_done(con_idx)
                    wlk_consumer.remove(con_idx)
