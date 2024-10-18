@@ -34,7 +34,7 @@ def get_passthru_lists(wilkins, passthruList):
     return pl_send, pl_recv
 
 idx = 0
-def exec_task(wilkins, puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl_con, pm, nm, io_proc, ensembles, serve_indices, onlinePassthru):
+def exec_task(wilkins, puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl_con, pm, nm, io_proc, ensembles, serve_indices, singleIter_passthru):
     import pyhenson as h
     substitute_fn=-1
     task_args = puppets[myTasks[0]][1]
@@ -57,8 +57,6 @@ def exec_task(wilkins, puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_pro
                 import time  #TODO: think on a better workaround for fanout.
                 time.sleep(3) #NB: this is again in fanout, fast consumer might fetch the old file name from prev iter in multiple iters #you run into problems at serve_all in producer
             fnames = vol.get_filenames(wlk_consumer[idx])
-            if wlk_consumer[idx] in pl_con: #passthru requires extra signaling for prod to exit from serving
-                vol.send_done(wlk_consumer[idx])
             print(f"{fnames = }")
             if ensembles:
                 vol.set_intercomm(fnames[0], "*", wlk_consumer[idx])
@@ -67,18 +65,10 @@ def exec_task(wilkins, puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_pro
                     idx = 0
             return fnames[-1]
 
-        if substitute_fn!=-1 or onlinePassthru and pl_con: #support for dynamic filenames or in passthru mode this works as a barrier
+        if substitute_fn!=-1: #support for dynamic filenames
             vol.set_consumer_filename(scf_cb)
 
-    if wlk_producer==1 and io_proc==1:
-        def afc_cb(name):
-            vol.serve_all(True, False)
-            vol.clear_files() #since keep set to True, need to clear files manually
-        if pl_prod and onlinePassthru: #if passthru, issue serve_all for get_filename to work at the consumer
-            vol.set_keep(True)
-            vol.set_after_file_close(afc_cb)
-
-    if not onlinePassthru:
+    if singleIter_passthru:
         wilkins.wait()
 
     if pythonPuppet:
@@ -89,7 +79,7 @@ def exec_task(wilkins, puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_pro
     else:
         myPuppet.proceed()
 
-    if not onlinePassthru:
+    if singleIter_passthru:
         wilkins.commit()
 
     #setting serve_indices again for the producer_done (which could be set before in flow_control causing problems) 
