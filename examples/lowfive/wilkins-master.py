@@ -11,12 +11,42 @@ from glob import glob
 if not glob(os.path.join(os.environ["HDF5_PLUGIN_PATH"], "liblowfive.*")):
     raise RuntimeError("Bad HDF5_PLUGIN_PATH, lowfive library not found")
 
-import pyhenson as h
 import sys
 
-from mpi4py import MPI
+#needed for torch dataloader module to work on mac https://github.com/pytorch/pytorch/issues/46648
+if sys.platform == "darwin":
+    print("Running on macOS")
+    import multiprocessing
+    multiprocessing.set_start_method("fork")
 
+import pyhenson as h
+
+from mpi4py import MPI
 import lowfive
+import argparse
+config_file = sys.argv[1]
+sys.argv = [sys.argv[0]] + sys.argv[2:]
+
+parser = argparse.ArgumentParser(description='Wilkins master script')
+parser.add_argument(
+    "-p", "--passthruSupport", type=int, choices=[0, 1], default=0,
+    help="Passthru support level for tasks (0: none [default], 1: single iteration)"
+)
+parser.add_argument(
+    "-v", "--verbosity", type=int, choices=[0, 1, 2], default=0,
+    help="Adjust logging level (0: none [default], 1: info, 2: debug)"
+)
+args = parser.parse_args()
+
+singleIter_passthru = False
+if args.passthruSupport==1:
+    singleIter_passthru = True
+    print("Providing passthru support for tasks that run single iteration, generating one file during execution")
+
+if args.verbosity==1:
+    lowfive.create_logger("info")
+elif args.verbosity==2:
+    lowfive.create_logger("debug")
 
 #TODO: omit print statements
 serve_counter = 0
@@ -66,7 +96,6 @@ size = world.Get_size()
 rank = world.Get_rank()
 
 #orc@22-11: generating procmap via YAML
-config_file = sys.argv[1]
 workflow = w.Workflow()
 workflow.make_wflow_from_yaml(config_file)
 procs_yaml = []
@@ -95,8 +124,6 @@ nm = h.NameMap()
 
 a = MPI._addressof(MPI.COMM_WORLD)
 wilkins = w.Wilkins(a,config_file)
-
-lowfive.create_logger("info") #trace #info
 
 #orc@31-03: adding for the new control logic: consumer looping until there are files
 wlk_producer = -1
@@ -171,13 +198,7 @@ if io_proc==1:
     #orc@09-06: determining the mode.
     pl_prod, pl_con = get_passthru_lists(wilkins, passthruList)
 
-onlinePassthru = False
-if '-o' in sys.argv:
-    onlinePassthru = True
-    sys.argv.remove('-o')
-    print("Providing onlinePassthru support")
-
-exec_task(wilkins, puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl_con, pm, nm, io_proc, ensembles, serve_indices, onlinePassthru)
+exec_task(wilkins, puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl_con, pm, nm, io_proc, ensembles, serve_indices, singleIter_passthru)
 
 #orc: deprecated as using exec_task to run both stateful&stateless tasks.
 #TODO: Add the logic for TP mode when L5 supports it (simply iterate thru myTasks)
