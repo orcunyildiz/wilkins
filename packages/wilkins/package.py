@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 
-from spack import *
+from spack.package import *
 
 
 class Wilkins(CMakePackage):
@@ -24,7 +24,7 @@ class Wilkins(CMakePackage):
 
     depends_on('mpich') #TODO: keeping it mpich for now as L5 does so, but should switch to mpi later
     depends_on('lowfive@master')
-    depends_on('hdf5+mpi+hl@1.14 ^mpich', type='link')
+    depends_on('hdf5+mpi+hl@1.14', type='link')
     depends_on('henson@master+python+mpi-wrappers')
 
     extends("python")
