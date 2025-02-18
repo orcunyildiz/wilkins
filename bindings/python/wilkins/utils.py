@@ -92,7 +92,8 @@ def exec_task(wilkins, puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_pro
     prodFirst = 0
     prodDone = 0
     if wlk_producer==1 and wlk_consumer:
-        if serve_indices[0] > wlk_consumer[0]:
+        if len(serve_indices) > 1 and len(wlk_consumer) > 1 and serve_indices[0] < wlk_consumer[0]:
+        #if serve_indices[0] > wlk_consumer[0]:
             prodFirst = 1
 
     if wlk_producer==1 and io_proc==1:
