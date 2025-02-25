@@ -3,7 +3,7 @@ add_subdirectory             (flow-control)
 add_subdirectory             (cycle)
 add_subdirectory             (ensembles)
 
-install                     (FILES wilkins-master.py
+install                     (FILES wilkins-master.py generate_run_script.py
                             DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
                             PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
                             GROUP_READ GROUP_WRITE GROUP_EXECUTE
