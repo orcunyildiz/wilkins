@@ -1,5 +1,5 @@
 tasks:
-  - func: sim
+  - func: "./sim.hx"
     nprocs: 1
     args: ["6", "-s"]
     outports:
@@ -11,7 +11,7 @@ tasks:
           - name: /group1/particles
             passthru: 0
             metadata: 1
-  - func: ana
+  - func: "./ana.hx"
     nprocs: 1
     inports:
       - filename: "outfile.h5"

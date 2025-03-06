@@ -1,5 +1,5 @@
 tasks:
-  - func: prod-henson
+  - func: "./prod-henson.hx"
     start_proc: 0
     nprocs: 1
     args: ["1"]
@@ -12,7 +12,7 @@ tasks:
           - name: /group1/particles
             passthru: 0
             metadata: 1
-  - func: con-henson
+  - func: "./con-henson.hx"
     start_proc: 1
     nprocs: 1
     args: ["1", "{filename}"]
