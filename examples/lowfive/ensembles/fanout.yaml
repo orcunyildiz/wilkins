@@ -1,0 +1,27 @@
+tasks:
+  - taskCount: 2
+    func: prod
+    nprocs: 1
+    args: ["2"]
+    outports:
+      - filename: "*.h5"
+        dsets:
+          - name: /group1/grid
+            passthru: 0
+            metadata: 1
+          - name: /group1/particles
+            passthru: 0
+            metadata: 1
+  - taskCount: 4
+    func: con_sf
+    nprocs: 1
+    args: ["2", "1", "{filename}"]
+    inports:
+      - filename: "*.h5"
+        dsets:
+          - name: /group1/grid
+            passthru: 0
+            metadata: 1
+          - name: /group1/particles
+            passthru: 0
+            metadata: 1

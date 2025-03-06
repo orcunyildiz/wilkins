@@ -87,8 +87,6 @@ def flow_control(vol, comm, intercomms, serve_indices, flowPolicies):
     vol.set_serve_indices(bsa_cb)
 
 from wilkins.utils import*
-
-#orc@22-11: adding the wlk py bindings
 from wilkins import pywilkins as w
 
 world = MPI.COMM_WORLD.Dup()
@@ -107,13 +105,16 @@ i = 0
 ensembles = 0
 for node in workflow.nodes:
     procs_yaml.append((node.func, node.nprocs))
-    task_exec = node.func #"./" + node.func  + ".hx"; #TODO: This can be an extra field in the YAML file if needed.
+    if node.taskCount > 1:
+        ensembles = 1
+    if not ensembles:
+        task_exec = node.func
+    else:
+        task_exec = "./" + node.func  + ".hx"
     puppets.append((task_exec, node.args))
     if node.actions:
         actions.append((node.func, node.actions))
-    if node.taskCount > 1:
-        ensembles = 1
-    #bookkeping of tasks belonging to the execution group
+    #bookkeeping of tasks belonging to the execution group
     if rank>=node.start_proc and rank < node.start_proc + node.nprocs:
         myTasks.append(i)
         passthru_files = node.passthru_files

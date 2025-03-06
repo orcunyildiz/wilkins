@@ -1,11 +1,23 @@
-#! /bin/bash
+#!/bin/bash
 
-rm run_ensemble.sh
-echo "mpirun -l -n \c" >> run_ensemble.sh
+if [ $# -lt 1 ]; then
+    echo "Usage: $0 <yaml_config_file>"
+    exit 1
+fi
 
-cat wilkins_prod_con.yaml | grep func | awk -F: '{print substr($2,2)}' > func.txt
-cat wilkins_prod_con.yaml | grep nprocs | awk -F: '{print $2}' > nprocs.txt
-cat wilkins_prod_con.yaml | grep taskCount | awk -F: '{print $2}' > nodeCount.txt
+yaml_file="$1"
+
+# Check if the yaml file exists
+if [ ! -f "$yaml_file" ]; then
+    echo "Error: File '$yaml_file' not found."
+    exit 1
+fi
+
+rm -f run_ensemble.sh
+
+cat "$yaml_file" | grep func | awk -F: '{print substr($2,2)}' > func.txt
+cat "$yaml_file" | grep nprocs | awk -F: '{print $2}' > nprocs.txt
+cat "$yaml_file" | grep taskCount | awk -F: '{print $2}' > nodeCount.txt
 
 count=$(cat nprocs.txt | wc -l)
 np=0
@@ -20,8 +32,12 @@ do
         cp "$func".hx "$func"_"$j".hx
     done
 done
-echo "$np\c"  >> run_ensemble.sh
-echo " python -u wilkins-master.py wilkins_prod_con.yaml -s " >> run_ensemble.sh
 
-#cleanup
+echo "mpirun -l -n $np python -u wilkins-master.py $yaml_file" > run_ensemble.sh
+
+chmod +x run_ensemble.sh
+
+# Cleanup
 rm func.txt nprocs.txt nodeCount.txt
+
+echo "Created run_ensemble.sh with $np processes for configuration in $yaml_file"
