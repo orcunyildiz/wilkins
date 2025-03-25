@@ -1,25 +1,17 @@
 tasks:
-  - func: producer
-    start_proc: 0
-    nprocs: 3
+  - func: "./producer.py"
+    nprocs: 1
     outports:
-      - filename: outfile.h5
+      - filename: "particles.h5"
         dsets:
-          - name: /group1/grid
-            passthru: 1
-            metadata: 0
-          - name: /group1/particles
-            passthru: 1
-            metadata: 0
-  - func: consumer
-    start_proc: 3
+          - name: "*" 
+            passthru: 0
+            metadata: 1
+  - func: "./consumer.py"
     nprocs: 1
     inports:
-      - filename: outfile.h5
+      - filename: "particles.h5"
         dsets:
-          - name: /group1/grid
-            passthru: 1
-            metadata: 0
-          - name: /group1/particles
-            passthru: 1
-            metadata: 0
+          - name: "*"
+            passthru: 0
+            metadata: 1

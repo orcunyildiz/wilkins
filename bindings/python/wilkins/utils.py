@@ -75,7 +75,11 @@ def exec_task(wilkins, puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_pro
         import importlib
         script_name = get_script_name(exec_name)
         py_script = importlib.import_module(script_name)
-        py_script.main(task_args)
+        if hasattr(py_script, "main") and callable(py_script.main):
+            try: 
+                py_script.main(task_args)
+            except TypeError: 
+                py_script.main()
     else:
         myPuppet.proceed()
 
