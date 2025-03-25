@@ -125,7 +125,10 @@ def exec_task(wilkins, puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_pro
                 print(f"{fnames = }")
                 if fnames: #more data to consume
                    if pythonPuppet:
-                       py_script.main(task_args)
+                       try:
+                           py_script.main(task_args)
+                       except TypeError:
+                           py_script.main()
                    else:
                        myPuppet.proceed()
                 else:
