@@ -11,10 +11,6 @@
 
 #include    "hdf5.h"
 
-#include    <lowfive/H5VOLProperty.hpp>
-#include    <lowfive/vol-dist-metadata.hpp>
-namespace l5 = LowFive;
-
 // D-dimensional point
 template<unsigned D>
 using SimplePoint = diy::Point<float, D>;
