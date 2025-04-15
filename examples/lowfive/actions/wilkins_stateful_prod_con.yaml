@@ -1,0 +1,30 @@
+tasks:
+  - func: "./prod-henson.hx"
+    start_proc: 0
+    nprocs: 1
+    args: ["2"]
+    actions: ["simple-actions", "prod_callback"]
+    outports:
+      - filename: "*.h5"
+        dsets:
+          - name: /group1/grid
+            passthru: 1
+            metadata: 0
+          - name: /group1/particles
+            passthru: 1
+            metadata: 0
+  - func: "./con-henson.hx"
+    start_proc: 1
+    nprocs: 1
+    args: ["2", "{filename}"]
+    actions: ["simple-actions", "con_callback"]
+    inports:
+      - filename: "*.h5"
+        io_freq: 1
+        dsets:
+          - name: /group1/grid
+            passthru: 1
+            metadata: 0
+          - name: /group1/particles
+            passthru: 1
+            metadata: 0

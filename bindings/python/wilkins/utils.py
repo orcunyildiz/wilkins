@@ -1,4 +1,26 @@
 import sys
+def setup_passthru_callbacks(vol, role, pl_con=[], keep=True):
+    if role == "producer":
+        def after_file_close(name):
+            vol.serve_all(True, False)
+
+        vol.set_send_filename(after_file_close)
+        vol.set_keep(keep)
+
+    elif role == "consumer":
+        source_index = 0
+
+        def set_consumer_filename():
+            nonlocal source_index
+            filenames = vol.get_filenames(source_index)
+            vol.send_done(source_index)
+            source_index = source_index + 1
+            if source_index==len(pl_con):
+                source_index = 0
+            return filenames[-1]
+
+        vol.set_consumer_filename(set_consumer_filename)
+
 
 #orc@25-01: adding support for defining callback actions externally via YAML file
 def import_from(module, name):

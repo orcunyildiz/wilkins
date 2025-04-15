@@ -188,16 +188,19 @@ if io_proc==1:
     if not set_si: #NB: set serve_indices if not set within the flow control
         vol.set_serve_indices(bsa_cb)
 
+    #orc@09-06: determining the mode.
+    pl_prod, pl_con = get_passthru_lists(wilkins, passthruList)
+
     #if any cb actions, setting them here.
     for action in actions:
         if wilkins.my_node(action[0]):
             file_name = action[1][0]
             cb_func   = action[1][1]
-            cb =  import_from(file_name, cb_func) 
-            cb(vol, local_rank)  #NB: For more advanced callbacks with args, users would need to write their own wilkins.py 
-
-    #orc@09-06: determining the mode.
-    pl_prod, pl_con = get_passthru_lists(wilkins, passthruList)
+            cb =  import_from(file_name, cb_func)
+            try:
+                cb(vol, local_rank, pl_con)  #NB: For more advanced callbacks with args, users would need to write their own wilkins.py 
+            except TypeError:
+                cb(vol, local_rank)
 
 exec_task(wilkins, puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl_con, pm, nm, io_proc, ensembles, serve_indices, singleIter_passthru)
 
