@@ -1,5 +1,5 @@
 tasks:
-  - func: prod-test
+  - func: "./prod-test.hx"
     nprocs: 4
     args: ["1", "--nwriters", "1"]
     nwriters: 1
@@ -12,7 +12,7 @@ tasks:
           - name: /group1/particles
             passthru: 0
             metadata: 1
-  - func: con-test
+  - func: "./con-test.hx"
     nprocs: 1
     args: ["1", "{filename}"]
     inports:

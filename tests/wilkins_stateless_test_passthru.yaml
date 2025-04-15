@@ -1,7 +1,8 @@
 tasks:
-  - func: sim-test
+  - func: "./sim-test.hx"
     nprocs: 4
     args: ["6"]
+    actions: ["passthru-actions", "prod_callback"]
     outports:
       - filename: "*.h5"
         dsets:
@@ -11,9 +12,10 @@ tasks:
           - name: /group1/particles
             passthru: 1
             metadata: 0
-  - func: ana-test
+  - func: "./ana-test.hx"
     nprocs: 3
     args: ["{filename}"]
+    actions: ["passthru-actions", "con_callback"]
     inports:
       - filename: "*.h5"
         io_freq: 2

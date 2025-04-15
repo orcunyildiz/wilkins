@@ -3,12 +3,15 @@
 bin_dir=$1
 passthru=$2
 
+cp ../../examples/lowfive/actions/passthru-actions.py .
+cp ../../examples/lowfive/wilkins-master.py .
+
 if [ $passthru == 0 ]; then
-    echo "mpirun -n 3 -l python -u wilkins-master.py wilkins_cycle_test_memory.yaml -s"
-    mpirun -n 3 -l python -u ../../examples/lowfive/wilkins-master.py ../../tests/wilkins_cycle_test_memory.yaml -s
+    echo "mpirun -n 3 -l python -u wilkins-master.py wilkins_cycle_test_memory.yaml"
+    mpirun -n 3 -l python -u wilkins-master.py ../../tests/wilkins_cycle_test_memory.yaml
 else
-    echo "mpirun -n 3 -l python -u wilkins-master.py wilkins_cycle_test_passthru.yaml -s"
-    mpirun -n 3 -l python -u ../../examples/lowfive/wilkins-master.py ../../tests/wilkins_cycle_test_passthru.yaml -s
+    echo "mpirun -n 3 -l python -u wilkins-master.py wilkins_cycle_test_passthru.yaml"
+    mpirun -n 3 -l python -u wilkins-master.py ../../tests/wilkins_cycle_test_passthru.yaml
 fi
 
 retval=$?

@@ -1,5 +1,5 @@
 tasks:
-  - func: node0-test
+  - func: "./node0-test.hx"
     nprocs: 1
     args: ["5", "-s"]
     inports:
@@ -17,7 +17,7 @@ tasks:
           - name: /group1/particles
             passthru: 0
             metadata: 1
-  - func: node1-test
+  - func: "./node1-test.hx"
     nprocs: 1
     args: ["5"]
     inports:
@@ -35,7 +35,7 @@ tasks:
           - name: /group1/particles
             passthru: 0
             metadata: 1
-  - func: node2-test
+  - func: "./node2-test.hx"
     nprocs: 1
     args: ["5"]
     inports:
