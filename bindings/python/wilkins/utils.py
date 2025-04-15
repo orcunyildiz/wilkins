@@ -65,7 +65,7 @@ def exec_task(wilkins, puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_pro
                     idx = 0
             return fnames[-1]
 
-        if substitute_fn!=-1: #support for dynamic filenames
+        if substitute_fn!=-1 and (not pl_con or singleIter_passthru): #support for dynamic filenames
             vol.set_consumer_filename(scf_cb)
 
     if singleIter_passthru:
