@@ -90,7 +90,8 @@ def exec_task(wilkins, puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_pro
     def bsa_cb():
         return serve_indices
 
-    vol.set_serve_indices(bsa_cb)
+    if io_proc==1:
+        vol.set_serve_indices(bsa_cb)
 
     #this is to resolve deadlock in a cycle where there are multiple tasks as both producers and consumers
     prodFirst = 0
