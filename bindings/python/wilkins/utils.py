@@ -12,8 +12,8 @@ def setup_passthru_callbacks(vol, role, pl_con=[], keep=True):
 
         def set_consumer_filename():
             nonlocal source_index
-            filenames = vol.get_filenames(source_index)
-            vol.send_done(source_index)
+            filenames = vol.get_filenames(pl_con[source_index])
+            vol.send_done(pl_con[source_index])
             source_index = source_index + 1
             if source_index==len(pl_con):
                 source_index = 0
