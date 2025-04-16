@@ -1,0 +1,17 @@
+tasks:
+  - func: "./producer-test.py"
+    nprocs: 1
+    outports:
+      - filename: "particles.h5"
+        dsets:
+          - name: "*" 
+            passthru: 0
+            metadata: 1
+  - func: "./consumer-test.py"
+    nprocs: 1
+    inports:
+      - filename: "particles.h5"
+        dsets:
+          - name: "*"
+            passthru: 0
+            metadata: 1

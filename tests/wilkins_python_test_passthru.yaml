@@ -1,0 +1,19 @@
+tasks:
+  - func: "./producer-test.py"
+    nprocs: 1
+    actions: ["passthru-actions", "prod_callback"]      
+    outports:
+      - filename: "particles.h5"
+        dsets:
+          - name: "*" 
+            passthru: 1
+            metadata: 0
+  - func: "./consumer-test.py"
+    nprocs: 1
+    actions: ["passthru-actions", "con_callback"]      
+    inports:
+      - filename: "particles.h5"
+        dsets:
+          - name: "*"
+            passthru: 1
+            metadata: 0

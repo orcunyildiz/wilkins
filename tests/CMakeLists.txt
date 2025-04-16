@@ -61,14 +61,30 @@ set_target_properties    (ana-test          PROPERTIES LINK_FLAGS ${linker_flags
 set_target_properties    (prod-ensemble     PROPERTIES LINK_FLAGS ${linker_flags})
 set_target_properties    (con-ensemble      PROPERTIES LINK_FLAGS ${linker_flags})
 
+add_test                (NAME python-prod-con-memory
+                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-python.sh ${CMAKE_CURRENT_BINARY_DIR} 0 0)
+
+add_test                (NAME python-prod-con-passthru
+                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-python.sh ${CMAKE_CURRENT_BINARY_DIR} 1 0)
+
+add_test                (NAME python-prod-2cons-memory
+                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-python.sh ${CMAKE_CURRENT_BINARY_DIR} 0 1)
+
+add_test                (NAME python-prod-2cons-passthru
+                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-python.sh ${CMAKE_CURRENT_BINARY_DIR} 1 1)
+
+add_test                (NAME python-2prod-cons-memory
+                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-python.sh ${CMAKE_CURRENT_BINARY_DIR} 0 2)
+
+add_test                (NAME python-2prod-cons-passthru
+                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-python.sh ${CMAKE_CURRENT_BINARY_DIR} 1 2)
 # ------------ test cycle (node 0 -> node 1 -> node 2 -> node 0) ------------------
 
-#TODO: enable it back one L5 has serve_indices cb enabled for producer_done
-#add_test                (NAME cycle-memory
-#                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-cycle.sh ${CMAKE_CURRENT_BINARY_DIR} 0)
+add_test                (NAME cycle-memory
+                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-cycle.sh ${CMAKE_CURRENT_BINARY_DIR} 0)
 
-#add_test                (NAME cycle-passthru
-#                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-cycle.sh ${CMAKE_CURRENT_BINARY_DIR} 1)
+add_test                (NAME cycle-passthru
+                        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-cycle.sh ${CMAKE_CURRENT_BINARY_DIR} 1)
 
 add_test                (NAME ensemble-fanin #Nx1
                         COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/test-ensemble.sh ${CMAKE_CURRENT_BINARY_DIR} 0)

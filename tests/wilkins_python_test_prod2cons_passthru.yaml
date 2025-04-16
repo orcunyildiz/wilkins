@@ -1,0 +1,33 @@
+tasks:
+  - func: "./prod-test.py"
+    nprocs: 1
+    actions: ["passthru-actions", "prod_callback"]
+    outports:
+      - filename: "outfile.h5"
+        dsets:
+          - name: "/particles" 
+            passthru: 1
+            metadata: 0
+      - filename: "outfile.h5"
+        dsets:
+          - name: "/grid"
+            passthru: 1
+            metadata: 0
+  - func: "./con1-test.py"
+    nprocs: 1
+    actions: ["passthru-actions", "con_callback"]
+    inports:
+      - filename: "outfile.h5"
+        dsets:
+          - name: "/particles"
+            passthru: 1
+            metadata: 0
+  - func: "./con2-test.py"
+    nprocs: 1
+    actions: ["passthru-actions", "con_callback"]
+    inports:
+      - filename: "outfile.h5"
+        dsets:
+          - name: "/grid"
+            passthru: 1
+            metadata: 0
