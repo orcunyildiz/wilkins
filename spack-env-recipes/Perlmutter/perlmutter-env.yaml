@@ -1,0 +1,69 @@
+# This is a Spack Environment file.
+#
+# It describes a set of packages to be installed, along with
+# configuration settings.
+spack:
+  # add package specs to the `specs` list
+  specs:
+  - py-h5py
+  - wilkins
+  view: true
+  compilers:
+  - compiler:
+      spec: gcc@13.2
+      paths:
+        cc: /usr/bin/gcc-13
+        cxx: /usr/bin/g++-13
+        f77: /usr/bin/gfortran-13
+        fc: /usr/bin/gfortran-13
+      flags: {}
+      operating_system: sles15
+      target: any
+      modules:
+      - PrgEnv-gnu
+      - libfabric/1.20.1
+      - gcc-native/13.2
+      environment: {}
+      extra_rpaths: []
+  modules:
+    prefix_inspections:
+      lib: [LD_LIBRARY_PATH]
+      lib64: [LD_LIBRARY_PATH]
+  packages:
+    gcc:
+      externals:
+      - spec: gcc@13.2.1 languages='c,c++,fortran'
+        prefix: /usr
+        modules:
+        - PrgEnv-gnu
+        - libfabric/1.20.1
+        - gcc-native/13.2
+        extra_attributes:
+          compilers:
+            c: /usr/bin/gcc-13
+            cxx: /usr/bin/g++-13
+            fortran: /usr/bin/gfortran-13
+          flags: {}
+          environment: {}
+          extra_rpaths: []
+    all:
+      require:
+      - '%gcc@13.2'
+      - target=zen3
+    mpich:
+      buildable: false
+      externals:
+      - spec: mpich@3
+        prefix: /opt/cray/pe/mpich/8.1.30/ofi/gnu/12.3
+        modules:
+        - cray-mpich/8.1.30
+        extra_attributes:
+          environment:
+            prepend_path:
+              LD_LIBRARY_PATH: /opt/cray/libfabric/1.20.1/lib64
+    libfabric:
+      buildable: false
+      externals:
+      - spec: libfabric@1.20.1
+        modules:
+        - libfabric/1.20.1        

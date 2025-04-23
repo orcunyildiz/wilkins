@@ -1,0 +1,58 @@
+# This is a Spack Environment file.
+#
+# It describes a set of packages to be installed, along with
+# configuration settings.
+spack:
+  # add package specs to the `specs` list
+  specs:
+  - henson ldflags="-L/usr/lib64/ -lsframe"
+  - lowfive ldflags="-L/usr/lib64/ -lsframe"
+  - py-h5py
+  - wilkins
+  view: true
+  concretizer:
+    unify: true
+  modules:
+    prefix_inspections:
+      lib: [LD_LIBRARY_PATH]
+      lib64: [LD_LIBRARY_PATH]
+  compilers:
+  - compiler:
+      spec: gcc@=12.3.0
+      paths:
+        cc: /usr/bin/gcc-12
+        cxx: /usr/bin/g++-12
+        f77: /usr/bin/gfortran-12
+        fc: /usr/bin/gfortran-12
+      flags: {}
+      operating_system: sles15
+      target: x86_64
+      modules: 
+      - PrgEnv-gnu
+      - gcc-native/12.3
+      - libfabric
+      environment: {}
+      extra_rpaths: []
+  packages:
+    all:
+      require:
+      - "%gcc@12.3"
+      - "target=zen3"
+    mpich:
+      buildable: false
+      externals:
+      - spec: mpich@3
+        prefix: /opt/cray/pe/mpich/8.1.28/ofi/gnu/12.3
+        modules:
+        - cray-mpich/8.1.28
+        extra_attributes:
+          environment:
+            prepend_path:
+              LD_LIBRARY_PATH: /opt/cray/libfabric/1.15.2.0/lib64
+    libfabric:
+      buildable: false
+      externals:
+      - spec: libfabric@1.15.2.0
+        modules:
+        - libfabric/1.15.2.0
+
