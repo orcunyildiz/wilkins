@@ -4,27 +4,27 @@ bin_dir=$1
 topology=$2 #0: fanin #1: fanout #2: NxN
 
 #Generating executables first
-cp prod-ensemble.hx prod-ensemble_0.hx
-cp prod-ensemble.hx prod-ensemble_1.hx
-cp prod-ensemble.hx prod-ensemble_2.hx
-cp prod-ensemble.hx prod-ensemble_3.hx
-cp con-ensemble.hx con-ensemble_0.hx
-cp con-ensemble.hx con-ensemble_1.hx
-cp con-ensemble.hx con-ensemble_2.hx
-cp con-ensemble.hx con-ensemble_3.hx
+cp prod-ensemble.hx prod-ensemble-inst0.hx
+cp prod-ensemble.hx prod-ensemble-inst1.hx
+cp prod-ensemble.hx prod-ensemble-inst2.hx
+cp prod-ensemble.hx prod-ensemble-inst3.hx
+cp con-ensemble.hx con-ensemble-inst0.hx
+cp con-ensemble.hx con-ensemble-inst1.hx
+cp con-ensemble.hx con-ensemble-inst2.hx
+cp con-ensemble.hx con-ensemble-inst3.hx
 
 if [ $topology == 0 ]
 then
     echo "mpirun -n 12 -l python -u wilkins-master.py wilkins_ensemble_test_fanin.yaml"
-    mpirun -n 12 -l python -u ../../examples/lowfive/wilkins-master.py ../../tests/wilkins_ensemble_test_fanin.yaml
+    mpirun -n 12 -l python -u wilkins-master.py ../../tests/wilkins_ensemble_test_fanin.yaml
 elif [ $topology == 1 ]
 then
     echo "mpirun -n 12 -l python -u wilkins-master.py wilkins_ensemble_test_fanout.yaml"
-    mpirun -n 12 -l python -u ../../examples/lowfive/wilkins-master.py ../../tests/wilkins_ensemble_test_fanout.yaml
+    mpirun -n 12 -l python -u wilkins-master.py ../../tests/wilkins_ensemble_test_fanout.yaml
 elif [ $topology == 2 ]
 then 
     echo "mpirun -n 12 -l python -u wilkins-master.py wilkins_ensembl_test_NxN.yaml"
-    mpirun -n 12 -l python -u ../../examples/lowfive/wilkins-master.py ../../tests/wilkins_ensemble_test_NxN.yaml
+    mpirun -n 12 -l python -u wilkins-master.py ../../tests/wilkins_ensemble_test_NxN.yaml
 fi
 
 retval=$?

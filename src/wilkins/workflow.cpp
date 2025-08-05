@@ -118,11 +118,20 @@ generateLinks (const vector<int> idx_task, const vector<int> idx_helper, int quo
             string delim = ".";
             string postDlm_out = outPort.name.substr(outPort.name.find(delim), string::npos);
 
-            string core_out;
-            stringstream extendedOutPort(outPort.name);
-            std::getline(extendedOutPort, core_out, '_');
-            if (strcmp(outPort.name.c_str(),core_out.c_str()) != 0)
-                core_out += postDlm_out; //orc: only extend this for fanin/fanout cases (once '_' found)
+	    std::string core_out;
+	    std::string delimiter = "-inst";
+	    std::string full_name = outPort.name;
+
+	    // Find position of "-inst"
+	    size_t pos = full_name.find(delimiter);
+
+	    if (pos != std::string::npos) {
+    		core_out = full_name.substr(0, pos);
+    		core_out += postDlm_out;  // Extend only in fanin/fanout cases
+	    } else {
+    		core_out = full_name;
+	    }
+
 
             if (match(k.c_str(),core_out.c_str()))
             {
@@ -137,12 +146,19 @@ generateLinks (const vector<int> idx_task, const vector<int> idx_helper, int quo
             string delim = ".";
             string postDlm_in = inPort.name.substr(inPort.name.find(delim), string::npos);
 
-            string idx = "_"; //TODO we can make this more wilkins specific even (e.g., "wilkins") since "_" could be used..
-            string core_in;
-            stringstream extendedInPort(inPort.name);
-            std::getline(extendedInPort, core_in, '_');
-            if (strcmp(inPort.name.c_str(),core_in.c_str()) != 0)
-                core_in += postDlm_in; //orc: only extend this for fanin/fanout cases (once '_' found)
+	    std::string core_in;
+            std::string delimiter = "-inst";
+            std::string full_name = inPort.name;
+                            
+            // Find position of "-inst"
+            size_t pos = full_name.find(delimiter);
+                        
+            if (pos != std::string::npos) {
+                core_in = full_name.substr(0, pos);
+                core_in += postDlm_in;  // Extend only in fanin/fanout cases
+            } else {        
+                core_in = full_name;
+            }   
 
             if (match(k.c_str(),core_in.c_str()))
             {
@@ -239,7 +255,7 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
                     node.actions = nodes[i]["actions"].as<std::vector<std::string>>();
 
                 node.taskCount = taskCount;
-                if (taskCount > 1) node.func +=  "_" + to_string(index);
+                if (taskCount > 1) node.func +=  "-inst" + to_string(index);  //"_" + to_string(index);
                 //node.start_proc = nodes[i]["start_proc"].as<int>(); //orc@10-03: omitting start_proc, and calculating it ourselves instead
                 node.start_proc = startProc;
                 startProc += node.nprocs;
@@ -282,7 +298,7 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
                             string preDlm = filename.substr(0, filename.find(delim));
                             string postDlm = filename.substr(filename.find(delim), string::npos);
                             //filename = preDlm + "_" + to_string(index) + postDlm;
-                            filename = preDlm + "_" + to_string(file_range[index]) + postDlm;
+                            filename = preDlm + "-inst" + to_string(file_range[index]) + postDlm; // "_" + to_string(file_range[index]) + postDlm;
                         }
                         //orc@09-01: not sure whether dsets is optional or not
                         const YAML::Node& dsets = inports[j]["dsets"];
@@ -358,7 +374,7 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
                             string preDlm = filename.substr(0, filename.find(delim));
                             string postDlm = filename.substr(filename.find(delim), string::npos);
                             //filename = preDlm + "_" + to_string(index) + postDlm;
-                            filename = preDlm + "_" + to_string(file_range[index]) + postDlm;
+                            filename = preDlm +  "-inst" + to_string(file_range[index]) + postDlm;  //"_" + to_string(file_range[index]) + postDlm;
                         }
 
                         const YAML::Node& dsets = outports[j]["dsets"];
@@ -408,6 +424,7 @@ Workflow::make_wflow_from_yaml( Workflow& workflow, const string& yaml_path )
                             l5_port.zerocopy  = zerocopy;
                             l5_port.passthru  = passthru;
                             l5_port.metadata  = metadata;
+			    l5_port.io_freq   = 1;
                             node.l5_outports.push_back(l5_port);
 
                         }
