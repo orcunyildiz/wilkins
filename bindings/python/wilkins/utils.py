@@ -1,6 +1,12 @@
 import sys
+import time
+import importlib
+
+import pyhenson as h
+
 def setup_passthru_callbacks(vol, role, pl_con=[], keep=True):
     if role == "producer":
+
         def after_file_close(name):
             vol.serve_all(True, False)
 
@@ -15,244 +21,174 @@ def setup_passthru_callbacks(vol, role, pl_con=[], keep=True):
             filenames = vol.get_filenames(pl_con[source_index])
             vol.send_done(pl_con[source_index])
             source_index = source_index + 1
-            if source_index==len(pl_con):
+            if source_index == len(pl_con):
                 source_index = 0
             return filenames[-1]
 
         vol.set_consumer_filename(set_consumer_filename)
 
-
-#orc@25-01: adding support for defining callback actions externally via YAML file
+# defining callback actions externally via YAML file
 def import_from(module, name):
     from importlib.util import find_spec
+
     if not find_spec(module):
-        print('%s: No such file exists for the callback actions.' % module, file=sys.stderr)
+        print(f"{module}: No such file exists for the callback actions.", file=sys.stderr)
         exit(1)
     module = __import__(module, fromlist=[name])
     return getattr(module, name)
 
+
 def get_script_name(script_name):
     if script_name.startswith("./"):
         script_name = script_name[2:]
-    
+
     if script_name.endswith(".py"):
         script_name = script_name[:-3]
-    
+
     return script_name
 
-def get_passthru_lists(wilkins, passthruList):
+
+def get_passthru_lists(wilkins, passthru_list):
 
     pl_send = []
-    pl_recv  = []
-    for pl in passthruList:
-        prodName = pl.split(":")[0]
-        conName = pl.split(":")[1]
-        pl_val = passthruList.get(pl)
-        if wilkins.my_node(prodName):
+    pl_recv = []
+    for pl in passthru_list:
+        prod_name = pl.split(":")[0]
+        con_name = pl.split(":")[1]
+        pl_val = passthru_list.get(pl)
+        if wilkins.my_node(prod_name):
             pl_send.append(pl_val[0][0])
-        if wilkins.my_node(conName): #pl_val[i][0]: prodIndex, pl_val[i][1]: conIndex
+        if wilkins.my_node(con_name):  # pl_val[i][0]: prodIndex, pl_val[i][1]: conIndex
             pl_recv.append(pl_val[0][1])
 
     return pl_send, pl_recv
 
+
 idx = 0
-def exec_task(wilkins, puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl_con, pm, nm, io_proc, ensembles, serve_indices, singleIter_passthru):
-    import pyhenson as h
-    substitute_fn=-1
-    task_args = puppets[myTasks[0]][1]
+
+
+def exec_task(
+    wilkins,
+    puppets,
+    my_tasks,
+    vol,
+    wlk_consumer,
+    wlk_producer,
+    pl_prod,
+    pl_con,
+    pm,
+    nm,
+    io_proc,
+    ensembles,
+    serve_indices,
+    single_iter_passthru,
+):
+
+    substitute_fn = -1
+    task_args = puppets[my_tasks[0]][1]
     for i in range(len(task_args)):
-        if '{filename}' in task_args[i]:
+        if "{filename}" in task_args[i]:
             substitute_fn = i
 
-    myPuppet = None
-    pythonPuppet = False
-    exec_name = puppets[myTasks[0]][0]
+    my_puppet = None
+    python_puppet = False
+    exec_name = puppets[my_tasks[0]][0]
     if exec_name.endswith(".py"):
-        pythonPuppet = True
+        python_puppet = True
     else:
-        myPuppet = h.Puppet(puppets[myTasks[0]][0], task_args, pm, nm)
+        my_puppet = h.Puppet(puppets[my_tasks[0]][0], task_args, pm, nm)
 
     if wlk_consumer:
+
         def scf_cb():
             global idx
             if ensembles:
-                import time  #TODO: think on a better workaround for fanout.
-                time.sleep(3) #NB: this is again in fanout, fast consumer might fetch the old file name from prev iter in multiple iters #you run into problems at serve_all in producer
+                # NB: this is again in fanout, fast consumer might fetch the old file name from prev iter in multiple iters
+                # you run into problems at serve_all in producer
+                time.sleep(3)
             fnames = vol.get_filenames(wlk_consumer[idx])
             print(f"{fnames = }")
             if ensembles:
                 vol.set_intercomm(fnames[0], "*", wlk_consumer[idx])
                 idx = idx + 1
-                if idx==len(wlk_consumer):
+                if idx == len(wlk_consumer):
                     idx = 0
             return fnames[-1]
 
-        if substitute_fn!=-1 and (not pl_con or singleIter_passthru): #support for dynamic filenames
+        if substitute_fn != -1 and (
+            not pl_con or single_iter_passthru
+        ):  # support for dynamic filenames
             vol.set_consumer_filename(scf_cb)
 
-    if singleIter_passthru:
+    if single_iter_passthru:
         wilkins.wait()
 
-    if pythonPuppet:
-        import importlib
+    if python_puppet:
         script_name = get_script_name(exec_name)
         py_script = importlib.import_module(script_name)
         if hasattr(py_script, "main") and callable(py_script.main):
-            try: 
+            try:
                 py_script.main(task_args)
-            except TypeError: 
+            except TypeError:
                 py_script.main()
     else:
-        myPuppet.proceed()
+        my_puppet.proceed()
 
-    if singleIter_passthru:
+    if single_iter_passthru:
         wilkins.commit()
 
-    #setting serve_indices again for the producer_done (which could be set before in flow_control causing problems) 
+    # setting serve_indices again for the producer_done (which could be set before in flow_control causing problems)
     def bsa_cb():
         return serve_indices
 
-    if io_proc==1:
+    if io_proc == 1:
         vol.set_serve_indices(bsa_cb)
 
-    #this is to resolve deadlock in a cycle where there are multiple tasks as both producers and consumers
-    prodFirst = 0
-    prodDone = 0
-    if wlk_producer==1 and wlk_consumer:
-        #Cycle topology in a pipeline fashion (e.g., 0->1->2->0)
+    # this is to resolve deadlock in a cycle where there are multiple tasks as both producers and consumers
+    prod_first = 0
+    prod_done = 0
+    if wlk_producer == 1 and wlk_consumer:
+        # Cycle topology in a pipeline fashion (e.g., 0->1->2->0)
         if len(serve_indices) == 1 and len(wlk_consumer) == 1:
             if serve_indices[0] > wlk_consumer[0]:
-                prodFirst = 1
-        #Cycle topology where task 0 connects with multiple tasks 
+                prod_first = 1
+        # Cycle topology where task 0 connects with multiple tasks
         elif len(serve_indices) > 1 and len(wlk_consumer) > 1:
             if serve_indices[0] < wlk_consumer[0]:
-                prodFirst = 1
+                prod_first = 1
 
-    if wlk_producer==1 and io_proc==1:
+    if wlk_producer == 1 and io_proc == 1:
         if wlk_consumer:
-            if prodFirst:
+            if prod_first:
                 vol.producer_done()
-                prodDone = 1
+                prod_done = 1
         else:
             vol.producer_done()
-            prodDone = 1
+            prod_done = 1
 
     if wlk_consumer:
         while wlk_consumer:
             for con_idx in wlk_consumer:
                 fnames = []
-                if ensembles: #There might be files in the producer still consuming by the other consumer tasks in the fan-out scenario
-                    import time
-                    time.sleep(3) #to resolve the race condition in fan-out topology.
+                if ensembles:
+                    # There might be files in the producer still consuming by the other consumer tasks in the fan-out scenario
+                    time.sleep(3)  # to resolve the race condition in fan-out topology.
                 fnames = vol.get_filenames(con_idx)
                 print(f"{fnames = }")
-                if fnames: #more data to consume
-                   if pythonPuppet:
-                       try:
-                           py_script.main(task_args)
-                       except TypeError:
-                           py_script.main()
-                   else:
-                       myPuppet.proceed()
-                else:
-                   vol.send_done(con_idx)
-                   wlk_consumer.remove(con_idx)
-
-    #if producer hasn't issued a done signal yet (for cycle topology)
-    if wlk_producer==1 and not prodDone:
-        vol.producer_done()
-
-#deprecated
-def exec_stateful(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl_con, pm, nm, io_proc, ensembles):
-    import pyhenson as h
-    print("Warning: Using a deprecated function to run stateful consumers.")
-    substitute_fn=-1
-    task_args = puppets[myTasks[0]][1]
-    for i in range(len(task_args)):
-        if '{filename}' in task_args[i]:
-            substitute_fn = i
-
-    myPuppet = h.Puppet(puppets[myTasks[0]][0], task_args, pm, nm)
-
-    if wlk_consumer:
-        def scf_cb():
-            global idx
-            fnames = vol.get_filenames(wlk_consumer[idx])
-            if wlk_consumer[idx] in pl_con: #passthru requires extra signaling for prod to exit from serving
-                vol.send_done(wlk_consumer[idx])
-            print(f"{fnames = }")
-            if ensembles:
-                vol.set_intercomm(fnames[0], "*", wlk_consumer[idx])
-                idx = idx + 1
-                if idx==len(wlk_consumer):
-                    idx = 0
-            return fnames[-1]
-
-        if substitute_fn!=-1 or pl_con: #support for dynamic filenames or in passthru mode this works as a barrier
-            vol.set_consumer_filename(scf_cb)
-
-    if wlk_producer==1 and io_proc==1:
-        def afc_cb(name):
-            vol.serve_all(True, False)
-            vol.clear_files() #since keep set to True, need to clear files manually
-        if pl_prod: #if passthru, issue serve_all for get_filename to work at the consumer
-            vol.set_keep(True)
-            vol.set_after_file_close(afc_cb)
-
-    myPuppet.proceed()
-
-#deprecated
-def exec_stateless(puppets, myTasks, vol, wlk_consumer, wlk_producer, pl_prod, pl_con, pm, nm, ensembles):
-    import pyhenson as h
-    from collections import defaultdict
-    print("Warning: Using a deprecated function to run stateless consumers.")
-    substitute_fn = -1
-    task_args = puppets[myTasks[0]][1]
-    for i in range(len(task_args)):
-        if '{filename}' in task_args[i]:
-            substitute_fn = i
-
-    if substitute_fn==-1: #static arg list, create the puppet only once
-        myPuppet = h.Puppet(puppets[myTasks[0]][0], task_args, pm, nm)
-
-    #TODO: need to take into account the if io_proc==1:
-    if wlk_consumer:
-        while wlk_consumer:
-            for con_idx in wlk_consumer:
-                fnames = []
-                all_fnames = vol.get_filenames(con_idx)
-                if all_fnames:
-       	       	    fnames.append(all_fnames[-1]) #using the latest file.
-                print(f"{fnames = }")
-                if fnames:
-                    for i in range(len(fnames)):
-                        if substitute_fn!=-1: #orc@01-05: user requested dynamic filenames
-                            def scf_cb():
-                                if ensembles:
-                                    vol.set_intercomm(fnames[i], "*", con_idx)
-                                return fnames[i] #TODO: We can also return the latest one if we want.
-                            vol.set_consumer_filename(scf_cb)
-                            fname = fnames[i]
-                            args_str = ' '.join(task_args)
-                            #NB: We can extend arg substitution for other args than filename as well (e.g., timesteps, with the dict user provides)
-                            args_str = args_str.format_map(defaultdict(str,filename=fname))
-                            curr_task_args = args_str.split()
-                            myPuppet = h.Puppet(puppets[myTasks[0]][0], curr_task_args, pm, nm)
-                        #NB:run this in a for loop for each filename. Our flow control is orthogonal, user can skip some/latest iters.
-                        #However, granularity within one iteration could be multiple files.
-                        myPuppet.proceed()
-                        if con_idx in pl_con: #passthru requires extra signaling
-                            vol.send_done(con_idx)
+                if fnames:  # more data to consume
+                    if python_puppet:
+                        try:
+                            py_script.main(task_args)
+                        except TypeError:
+                            py_script.main()
+                    else:
+                        my_puppet.proceed()
                 else:
                     vol.send_done(con_idx)
                     wlk_consumer.remove(con_idx)
 
-    if wlk_producer==1:
-        def afc_cb(name):
-            vol.serve_all(True, False)
-            vol.clear_files() #since keep set to True, need to clear files manually
-        if pl_prod:  #if passthru, issue serve_all for get_filename to work at the consumer
-            vol.set_keep(True)
-            vol.set_after_file_close(afc_cb)
-        myPuppet.proceed()
+    # if producer hasn't issued a done signal yet (for cycle topology)
+    if wlk_producer == 1 and not prod_done:
         vol.producer_done()
+
+
