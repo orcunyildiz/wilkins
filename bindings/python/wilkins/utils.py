@@ -1,9 +1,24 @@
 import sys
 import time
 import importlib
+import fnmatch
 
 import pyhenson as h
 
+def get_source_index(pl_con, target_filename):
+    if target_filename in pl_con:
+        return pl_con[target_filename]
+
+    # wildcard matching
+    for pattern, con_index in pl_con.items():
+        if fnmatch.fnmatch(target_filename, pattern):
+            return con_index
+
+    return None
+
+# TODO use the set_consumer_filename instead of before_file_open
+#once L5 cb has the name argument, and omit filename_cache
+filename_cache = {}
 def setup_passthru_callbacks(vol, role, pl_con=[], keep=True):
     if role == "producer":
 
@@ -14,25 +29,31 @@ def setup_passthru_callbacks(vol, role, pl_con=[], keep=True):
         vol.set_keep(keep)
 
     elif role == "consumer":
-        source_index = 0
 
-        def set_consumer_filename():
-            nonlocal source_index
-            filenames = vol.get_filenames(pl_con[source_index])
-            vol.send_done(pl_con[source_index])
-            source_index = source_index + 1
-            if source_index == len(pl_con):
-                source_index = 0
-            return filenames[-1]
+        def before_file_open(name):
+            source_index = get_source_index(pl_con, name)
 
-        vol.set_consumer_filename(set_consumer_filename)
+            if source_index is None:
+                available_patterns = list(pl_con.keys())
+                raise ValueError(
+                    f"No matching consumer found for filename '{name}'. "
+                    f"Available patterns: {available_patterns}"
+                )
+            filenames = vol.get_filenames(source_index)
+            filename_cache[source_index] = filenames
+            vol.send_done(source_index)
+
+        vol.set_before_file_open(before_file_open)
+
 
 # defining callback actions externally via YAML file
 def import_from(module, name):
     from importlib.util import find_spec
 
     if not find_spec(module):
-        print(f"{module}: No such file exists for the callback actions.", file=sys.stderr)
+        print(
+            f"{module}: No such file exists for the callback actions.", file=sys.stderr
+        )
         exit(1)
     module = __import__(module, fromlist=[name])
     return getattr(module, name)
@@ -51,15 +72,15 @@ def get_script_name(script_name):
 def get_passthru_lists(wilkins, passthru_list):
 
     pl_send = []
-    pl_recv = []
+    pl_recv = {}
     for pl in passthru_list:
         prod_name = pl.split(":")[0]
         con_name = pl.split(":")[1]
         pl_val = passthru_list.get(pl)
         if wilkins.my_node(prod_name):
             pl_send.append(pl_val[0][0])
-        if wilkins.my_node(con_name):  # pl_val[i][0]: prodIndex, pl_val[i][1]: conIndex
-            pl_recv.append(pl_val[0][1])
+        if wilkins.my_node(con_name):  # pl_val[i][0]: prodIndex, pl_val[i][1]: conIndex, pl_val[i][2]: filename
+            pl_recv[pl_val[0][2]] = pl_val[0][1]
 
     return pl_send, pl_recv
 
@@ -106,8 +127,12 @@ def exec_task(
                 # NB: this is again in fanout, fast consumer might fetch the old file name from prev iter in multiple iters
                 # you run into problems at serve_all in producer
                 time.sleep(3)
-            fnames = vol.get_filenames(wlk_consumer[idx])
-            print(f"{fnames = }")
+            if pl_con and wlk_consumer[idx] in filename_cache:
+                fnames = filename_cache[wlk_consumer[idx]]
+                print(f"{fnames = } (from cache)")
+            else:
+                fnames = vol.get_filenames(wlk_consumer[idx])
+                print(f"{fnames = } (from vol)")
             if ensembles:
                 vol.set_intercomm(fnames[0], "*", wlk_consumer[idx])
                 idx = idx + 1
@@ -116,7 +141,7 @@ def exec_task(
             return fnames[-1]
 
         if substitute_fn != -1 and (
-            not pl_con or single_iter_passthru
+            not single_iter_passthru
         ):  # support for dynamic filenames
             vol.set_consumer_filename(scf_cb)
 
@@ -190,5 +215,3 @@ def exec_task(
     # if producer hasn't issued a done signal yet (for cycle topology)
     if wlk_producer == 1 and not prod_done:
         vol.producer_done()
-
-

@@ -160,7 +160,7 @@ def main():
         )  # key: prod_name value: (flowPolicy, intercomm index)
         passthru_list = defaultdict(
             list
-        )  # key: exec_group value: (prodIndex, conIndex) #orc@09-06: added for passthru support
+        )  # key: exec_group value: (prodIndex, conIndex, filename) #orc@09-06: added for passthru support
         flow_exec_group = []
         # support for reading/writing files from/to disk (without matching links)
         for pf in passthru_files:
@@ -176,7 +176,7 @@ def main():
                 # orc@09-06: constructing the passthru list
                 if not passthru_list.get(prop.execGroup):
                     passthru_list[prop.execGroup].append(
-                        (prop.prodIndex, prop.conIndex)
+                        (prop.prodIndex, prop.conIndex, prop.filename)
                     )
             if prop.consumer == 1 and not any(
                 x in prop.execGroup for x in exec_group
