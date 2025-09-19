@@ -1,4 +1,5 @@
 import sys
+import os
 import time
 import importlib
 import fnmatch
@@ -59,13 +60,22 @@ def import_from(module, name):
     return getattr(module, name)
 
 
-def get_script_name(script_name):
-    if script_name.startswith("./"):
-        script_name = script_name[2:]
+def get_script_name(exec_name):
 
-    if script_name.endswith(".py"):
-        script_name = script_name[:-3]
-
+    normalized_path = os.path.abspath(exec_name)                                                                                                                       
+    print("norm pth", normalized_path)
+    if not os.path.exists(normalized_path):                                                                                                                            
+        raise FileNotFoundError(f"Script not found: {exec_name}")                                                                                                      
+    script_dir = os.path.dirname(normalized_path)                                                                                                                      
+    script_filename = os.path.basename(normalized_path)
+    print("script_dir", script_dir, "filename", script_filename)
+    if script_filename.endswith('.py'):                                                                                                                                
+        script_name = script_filename[:-3]                                                                                                                             
+    else:                                                                                                                                                              
+        script_name = script_filename                                                                                                                                  
+        normalized_path += '.py'                                                                                                                                       
+    if script_dir not in sys.path:                                                                                                                                     
+        sys.path.insert(0, script_dir)    
     return script_name
 
 
