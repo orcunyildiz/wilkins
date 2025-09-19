@@ -63,12 +63,10 @@ def import_from(module, name):
 def get_script_name(exec_name):
 
     normalized_path = os.path.abspath(exec_name)                                                                                                                       
-    print("norm pth", normalized_path)
     if not os.path.exists(normalized_path):                                                                                                                            
         raise FileNotFoundError(f"Script not found: {exec_name}")                                                                                                      
     script_dir = os.path.dirname(normalized_path)                                                                                                                      
     script_filename = os.path.basename(normalized_path)
-    print("script_dir", script_dir, "filename", script_filename)
     if script_filename.endswith('.py'):                                                                                                                                
         script_name = script_filename[:-3]                                                                                                                             
     else:                                                                                                                                                              
