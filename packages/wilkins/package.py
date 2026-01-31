@@ -22,8 +22,13 @@ class Wilkins(CMakePackage):
 
     version('master', branch='master')
 
-    depends_on('mpich') #TODO: keeping it mpich for now as L5 does so, but should switch to mpi later
-    depends_on('lowfive@master')
+    # https://github.com/spack/spack/releases/tag/v1.0.0#languages-are-virtual-dependencies
+    depends_on("c", type="build")
+    depends_on("cxx", type="build")
+    depends_on("fortran", type="build")
+    
+    depends_on('mpi')
+    depends_on('lowfive')
     depends_on('hdf5+mpi+hl@1.14', type='link')
     depends_on('henson@master+python+mpi-wrappers')
 
