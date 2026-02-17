@@ -17,8 +17,8 @@ def generate_run_scripts(config_file, generate_all=False, scheduler=None, wallti
     tasks = config['tasks']
     total_procs = sum(task.get('nprocs', 1) for task in tasks)
     
-    # Base command to run the wilkins-master
-    base_cmd = f"python -u wilkins-master.py {config_file_name}"
+    # Base command to run the wilkins-master entry point (installed via pip)
+    base_cmd = f"wilkins-master {config_file_name}"
     
     if generate_all or scheduler == "mpi":
         generate_mpi_script(config_file_name, config_dir, base_cmd, total_procs)

@@ -8,7 +8,30 @@ Wilkins supports any directed-graph topology of tasks, including common patterns
 
 # Installation
 
-You can either install Wilkins using [Spack](https://spack.readthedocs.io/en/latest/) (recommended), or manually.
+## Prerequisites
+
+Wilkins requires the following runtime dependencies:
+
+- Python 3.8 or higher
+- [MPI](http://www.mpich.org) (e.g., MPICH or Open MPI)
+- [mpi4py](https://mpi4py.readthedocs.io/)
+- [LowFive](https://github.com/diatomic/LowFive) (Python bindings)
+- [HDF5](https://www.hdfgroup.org/solutions/hdf5/) version 1.14
+- [Henson](https://github.com/henson-insitu/henson) (Python bindings -- only required for C++ task codes)
+
+## Installing with pip
+
+```bash
+pip install .
+```
+
+Or for development (editable install):
+
+```bash
+pip install -e .
+```
+
+This installs the `wilkins` Python package and the `wilkins-master` command-line tool.
 
 ## Installing with Spack
 
@@ -40,81 +63,157 @@ elsewhere in your system.
 spack install wilkins
 ```
 
-## Installing manually
+## Verifying the installation
 
-### Build dependencies
+After installation, verify that Wilkins is importable:
 
-- C++17
-- [MPI](http://www.mpich.org)
-- Python 3.8 or higher
-- CMake 3.9 or higher
-- [LowFive](https://github.com/diatomic/LowFive) 
-- [HDF5](https://www.hdfgroup.org/solutions/hdf5/) version 1.14
-- [zlib](https://www.zlib.net/)
-- [Henson](https://github.com/henson-insitu/henson)
-
-### Building Wilkins
-
-Retrieve the sources of Wilkins (in the current directory, e.g.):
-```
-git clone https://github.com/orcunyildiz/wilkins.git .
+```bash
+python -c "import wilkins; print('Wilkins installed successfully')"
 ```
 
-Wilkins is built using CMake. Assuming that you created a build directory, then:
-```
-cd path/to/wilkins/build
+# Environment setup
 
-cmake /path/to/wilkins/ \
--DCMAKE_CXX_COMPILER=mpicxx \
--DCMAKE_C_COMPILER=mpicc \
--DCMAKE_INSTALL_PREFIX=/path/to/wilkins/install \
--DHENSON_INCLUDE_DIR=/path/to/henson/include \
--DHENSON_LIBRARY=/path/to/henson/build/libhenson.a \
--DHENSON_PMPI_LIBRARY=/path/to/henson/build/libhenson-pmpi-static.a \
--DPYTHON_EXECUTABLE=/path/to/python/bin/python3 \
--DLOWFIVE_INCLUDE_DIR=/path/to/LowFive/install/include \
--DLOWFIVE_LIBRARY=/path/to/LowFive/install/lib/liblowfive.dylib \
--DLOWFIVE_DIST_LIBRARY=/path/to/LowFive/install/lib/liblowfive-dist.a \
--DHDF5_INCLUDE_DIR=/path/to/hdf5/install/include \
--DHDF5_LIBRARY=/path/to/hdf5/install/lib/libhdf5.a \
--DHDF5_HL_LIBRARY=/path/to/hdf5/install/lib/libhdf5_hl.a \
--DZ_LIBRARY=/path/to/zlib/lib/libz.a 
+Wilkins uses LowFive as its data transport layer. Before running workflows, set the following environment variables:
 
-make -j8
-make install
-```
-
-# Running examples
-
-Wilkins provides several examples of simple workflows. 
-With Spack installation, the environment variables required for its LowFive layer are automatically set after doing ``` spack load wilkins```, but with manual installation, set them as follows:
-
-```
-export HDF5_VOL_CONNECTOR=lowfive under_vol=0;under_info={};
+```bash
+export HDF5_VOL_CONNECTOR="lowfive under_vol=0;under_info={};"
 export HDF5_PLUGIN_PATH=/path/to/lowfive/build/src
 ```
 
-Assuming Wilkins was installed following the previous instructions, run the following commands:
-```
-cd /path/to/wilkins/install/examples/lowfive/cycle
+With Spack installation, these are automatically set after doing `spack load wilkins`.
+
+# Running examples
+
+Wilkins provides several examples of simple workflows.
+
+```bash
+# Run a cycle example
+cd /path/to/wilkins/examples/lowfive/cycle
 ./run_cycle.sh
 
-cd /path/to/wilkins/install/examples/lowfive/flow-control/stateful
+# Run a flow control example
+cd /path/to/wilkins/examples/lowfive/flow-control/stateful
 ./run_stateful.sh
-
 ```
 
-# Using Wilkins in your own project
+# Usage
 
-To execute the user task codes with Wilkins, first you would need to link them with [Henson](https://github.com/henson-insitu/henson/) as it serves as the execution model of Wilkins. You can refer to the lines 32-46 at Wilkins' main CMake [file](https://github.com/orcunyildiz/wilkins/blob/master/CMakeLists.txt) for this step. 
+## Running a workflow
 
-Second, the task codes need to be compiled as position-independent codes. This requires giving the ```-fPIE``` flag to the compilers. Also, CMake automatically adds this option if ```CMAKE_POSITION_INDEPENDENT_CODE``` is set to ```ON```.
+After installing Wilkins and setting up the environment, run a workflow using:
 
-Third, Henson requires some specific linker flags. You would need to add ```-pie -Wl,--export-dynamic``` and ```-Wl,-u,henson_set_contexts,-u,henson_set_namemap``` as linker flags. Please refer to the CMake of the simple examples for this step such as the lines 18-23 at this CMake [file](https://github.com/orcunyildiz/wilkins/blob/master/examples/lowfive/cycle/CMakeLists.txt).
+```bash
+mpirun -n <nprocs> wilkins-master config.yaml
+```
 
-After building the task codes as shared objects and linking them with Henson, you can execute them with the ```wilkins-master.py```, which is the workflow driver code. ```spack load wilkins``` places this driver code in the ```PATH``` automatically. Sample command is given below which uses 4 MPI ranks to execute the workflow description provided in the workflow configuration file. For sample configuration files, please refer to the simple workflow examples provided in this repository.
+Or equivalently:
+
+```bash
+mpirun -n <nprocs> python -m wilkins.master config.yaml
+```
+
+### Command-line options
 
 ```
-mpirun -n 4 python wilkins-master.py config.yaml
+wilkins-master config.yaml [-p 0|1] [-v 0|1|2]
+
+  -p, --passthruSupport  Passthru support level (0: none [default], 1: single iteration)
+  -v, --verbosity        Logging level (0: none [default], 1: info, 2: debug)
+```
+
+## Using Wilkins in your own project
+
+To execute user task codes with Wilkins, you need to:
+
+1. **For Python tasks**: No compilation needed. Write your task as a Python script with a `main()` function and reference the `.py` file in the YAML configuration.
+
+2. **For C++ tasks**: Link them with [Henson](https://github.com/henson-insitu/henson/) and compile as shared objects (`.hx` files). The task codes need to be compiled as position-independent codes (`-fPIE`). On Linux, add `-pie -Wl,--export-dynamic` and `-Wl,-u,henson_set_contexts,-u,henson_set_namemap` as linker flags.
+
+3. **Create a YAML configuration file** describing the workflow tasks, their data requirements, and the number of MPI processes per task.
+
+## Workflow configuration (YAML)
+
+Below is a sample YAML file for a 3-task workflow (1 producer, 2 consumers):
+
+```yaml
+tasks:
+  - func: producer
+    nprocs: 3
+    outports:
+      - filename: outfile.h5
+        dsets:
+          - name: /group1/grid
+            file: 0
+            memory: 1
+          - name: /group1/particles
+            file: 0
+            memory: 1
+  - func: consumer1
+    nprocs: 5
+    inports:
+      - filename: outfile.h5
+        dsets:
+          - name: /group1/grid
+            file: 0
+            memory: 1
+  - func: consumer2
+    nprocs: 2
+    inports:
+      - filename: outfile.h5
+        dsets:
+          - name: /group1/particles
+            file: 0
+            memory: 1
+```
+
+## Python API
+
+The Wilkins Python package can also be used programmatically:
+
+```python
+from wilkins.workflow import Workflow
+from wilkins.wilkins import Wilkins, get_local_comm, get_intercomms
+from mpi4py import MPI
+
+# Parse workflow configuration
+workflow = Workflow()
+workflow.make_wflow_from_yaml("config.yaml")
+
+# Create Wilkins instance
+wilkins = Wilkins(MPI.COMM_WORLD, "config.yaml")
+
+# Get local communicator and intercommunicators
+comm = get_local_comm(wilkins)
+intercomms = get_intercomms(wilkins)
+
+# Get LowFive properties
+l5_props = wilkins.set_lowfive()
+```
+
+# Project structure
 
 ```
+wilkins/
+  bindings/python/wilkins/    # Pure-Python Wilkins package
+    __init__.py               # Package init with public API
+    types.py                  # Type definitions (WilkinsSizes, constants)
+    comm.py                   # MPI communicator wrapper
+    context.py                # Global state management
+    workflow.py               # Workflow graph + YAML parser
+    dataflow.py               # Single dataflow link
+    wilkins.py                # Top-level Wilkins class
+    master.py                 # Workflow driver (wilkins-master entry point)
+    utils.py                  # Utility functions
+    pywilkins.py              # Backwards-compatibility shim
+  examples/                   # Example workflows
+  pyproject.toml              # Python package configuration
+  setup.py                    # Setuptools shim for editable installs
+```
+
+# Legacy C++ build (deprecated)
+
+The original C++ implementation and CMake build system are retained in `src/`,
+`include/`, and `CMakeLists.txt` for reference. The pure-Python port in
+`bindings/python/wilkins/` replaces the C++ library (`libwilkins`) and the
+pybind11 extension module (`pywilkins`). New users should use `pip install`
+instead of CMake.

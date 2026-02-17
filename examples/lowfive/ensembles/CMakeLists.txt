@@ -1,3 +1,8 @@
+# ---------------------------------------------------------------------------
+# Ensemble execution example: builds prod.hx, con.hx, con_sf.hx.
+# Run with:  ./generateRunScript.sh NxN.yaml && bash run_ensemble.sh
+# ---------------------------------------------------------------------------
+
 set                         (CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 add_library                 (prod SHARED producer.cpp)
@@ -32,7 +37,7 @@ install                     (TARGETS prod con con_sf
                             GROUP_READ GROUP_WRITE GROUP_EXECUTE
                             WORLD_READ WORLD_WRITE WORLD_EXECUTE)
 
-install                     (FILES fanin.yaml fanout.yaml NxN.yaml generateRunScript.sh ../wilkins-master.py
+install                     (FILES fanin.yaml fanout.yaml NxN.yaml generateRunScript.sh
                             DESTINATION ${CMAKE_INSTALL_PREFIX}/examples/lowfive/ensembles/
                             PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
                             GROUP_READ GROUP_WRITE GROUP_EXECUTE

@@ -1,6 +1,10 @@
+# ---------------------------------------------------------------------------
+# Stateless flow-control example: builds sim.hx (producer) and ana.hx (consumer).
+# Run with:  mpirun -n 2 -l wilkins-master wilkins_prod_con.yaml
+# ---------------------------------------------------------------------------
+
 set                         (CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-#Adding for Henson: executables as in Wilkins
 add_library                 (sim SHARED simulation.cpp)
 target_link_libraries       (sim ${libraries})
 set_target_properties       (sim PROPERTIES PREFIX "")
@@ -27,7 +31,7 @@ install                     (TARGETS sim ana
                             GROUP_READ GROUP_WRITE GROUP_EXECUTE
                             WORLD_READ WORLD_WRITE WORLD_EXECUTE)
 
-install                     (FILES wilkins_prod_con.yaml wilkins_prod_con_singleFile.yaml run_stateless.sh ../../wilkins-master.py
+install                     (FILES wilkins_prod_con.yaml wilkins_prod_con_singleFile.yaml run_stateless.sh
                             DESTINATION ${CMAKE_INSTALL_PREFIX}/examples/lowfive/flow-control/stateless/
                             PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
                             GROUP_READ GROUP_WRITE GROUP_EXECUTE

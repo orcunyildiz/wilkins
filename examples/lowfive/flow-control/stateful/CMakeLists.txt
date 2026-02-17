@@ -1,6 +1,10 @@
+# ---------------------------------------------------------------------------
+# Stateful flow-control example: builds prod/con .hx shared libraries.
+# Run with:  mpirun -n 2 -l wilkins-master wilkins_prod_con.yaml
+# ---------------------------------------------------------------------------
+
 set                         (CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-#Adding for Henson: executables as in Wilkins
 add_library                 (prod-henson SHARED prod-henson.cpp)
 target_link_libraries       (prod-henson ${libraries})
 set_target_properties       (prod-henson PROPERTIES PREFIX "")
@@ -45,7 +49,7 @@ install                     (TARGETS prod-henson prod1-henson con-henson con1-he
                             GROUP_READ GROUP_WRITE GROUP_EXECUTE
                             WORLD_READ WORLD_WRITE WORLD_EXECUTE)
 
-install                     (FILES wilkins_prod_con.yaml wilkins_prod_con_singleFile.yaml wilkins_prod_2cons.yaml run_stateful.sh ../../wilkins-master.py
+install                     (FILES wilkins_prod_con.yaml wilkins_prod_con_singleFile.yaml wilkins_prod_2cons.yaml run_stateful.sh
                             DESTINATION ${CMAKE_INSTALL_PREFIX}/examples/lowfive/flow-control/stateful/
                             PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
                             GROUP_READ GROUP_WRITE GROUP_EXECUTE

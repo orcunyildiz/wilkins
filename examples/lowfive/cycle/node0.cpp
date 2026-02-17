@@ -42,10 +42,8 @@ void node0_f (std::string prefix,
             &Block::save,
             &Block::load);
         size_t global_num_points = local_num_points * global_nblocks;
-        AddBlock                        prod_create(prod_master, local_num_points, global_num_points, global_nblocks);
         diy::ContiguousAssigner         prod_assigner(local_.size(), global_nblocks);
         diy::RegularDecomposer<Bounds>  prod_decomposer(dim, domain, global_nblocks);
-        prod_decomposer.decompose(local_.rank(), prod_assigner, prod_create);
         // get global number of particles
         size_t global_num_points_r = global_num_points; // only for the first iteration which then will be overwritten
         //orc@16-05: adding reading here from node2
@@ -65,7 +63,7 @@ void node0_f (std::string prefix,
 
             size_t local_num_points_r = global_num_points_r / global_nblocks;
             AddBlock                        prod_create_r(prod_master, local_num_points_r, global_num_points_r, global_nblocks);
-            prod_decomposer.decompose(local_.rank(), prod_assigner, prod_create_r); //orc@16-05: doing decomposition again as global_num_points_r is decreasing
+            prod_decomposer.decompose(local_.rank(), prod_assigner, prod_create_r);
 
             // read the particle data
             prod_master.foreach([&](Block* b, const diy::Master::ProxyWithLink& cp)
@@ -75,6 +73,12 @@ void node0_f (std::string prefix,
             H5Sclose(dspace_r);
             H5Dclose(dset_r);
             H5Fclose(file_r);
+        }
+        else
+        {
+            // First iteration: decompose with the initial point count
+            AddBlock                        prod_create(prod_master, local_num_points, global_num_points, global_nblocks);
+            prod_decomposer.decompose(local_.rank(), prod_assigner, prod_create);
         }
 
         //orc@16-05: writing part

@@ -1,3 +1,3 @@
-mpirun -n 2 -l python -u wilkins-master.py wilkins_prod_con.yaml
+mpirun -n 2 -l wilkins-master wilkins_prod_con.yaml
 
 

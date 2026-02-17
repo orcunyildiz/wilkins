@@ -33,7 +33,7 @@ do
     done
 done
 
-echo "mpirun -l -n $np python -u wilkins-master.py $yaml_file" > run_ensemble.sh
+echo "mpirun -l -n $np wilkins-master $yaml_file" > run_ensemble.sh
 
 chmod +x run_ensemble.sh
 

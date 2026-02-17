@@ -9,36 +9,64 @@ from spack.package import *
 
 
 class Wilkins(CMakePackage):
-    """A workflow system for triple convergence of HPC, Big Data, and AI applications."""
+    """A workflow system for triple convergence of HPC, Big Data, and AI applications.
+
+    Wilkins is an in situ workflow system for heterogeneous task specification
+    and execution.  The orchestrator is a pure-Python package installed via pip.
+    CMake builds the C++ example task libraries (.hx shared libraries loaded by
+    Henson at runtime) and registers the CTest test suite.
+
+    Install with tests:  spack install --test=root wilkins
+    """
 
     homepage = "https://github.com/orcunyildiz/wilkins"
-    url      = "https://github.com/orcunyildiz/wilkins.git"
     git      = "https://github.com/orcunyildiz/wilkins.git"
-
-    #NB: Use the local copy if there are problems with private GitHub repo authentication.
-    #homepage = "/Users/oyildiz/Work/software/wilkins"
-    #url      = "/Users/oyildiz/Work/software/wilkins"
-    #git      = "/Users/oyildiz/Work/software/wilkins"
 
     version('master', branch='master')
 
-    # https://github.com/spack/spack/releases/tag/v1.0.0#languages-are-virtual-dependencies
-    depends_on("c", type="build")
-    depends_on("cxx", type="build")
-    depends_on("fortran", type="build")
-    
+    # Core dependencies
     depends_on('mpi')
     depends_on('lowfive')
     depends_on('hdf5+mpi+hl@1.14', type='link')
     depends_on('henson@master+python+mpi-wrappers')
 
-    extends("python")
-    depends_on("py-mpi4py", type=("build", "run"))
+    # Python dependencies (needed for pip install of the orchestrator)
+    depends_on('python@3.8:', type=('build', 'run'))
+    depends_on('py-setuptools', type='build')
+    depends_on('py-pip', type='build')
+    depends_on('py-wheel', type='build')
+    depends_on('py-mpi4py', type=('build', 'run'))
+    depends_on('py-pyyaml', type=('build', 'run'))
+    depends_on('py-h5py', type=('build', 'run'))
 
     def cmake_args(self):
-        args = ['-DCMAKE_C_COMPILER=%s' % self.spec['mpi'].mpicc,
-                '-DCMAKE_CXX_COMPILER=%s' % self.spec['mpi'].mpicxx,
-                self.define("PYTHON_EXECUTABLE", self.spec["python"].command.path)]
-
+        args = [
+            self.define('lowfive', True),
+            self.define('wilkins_python', False),
+            self.define('wilkins_cpp_lib', False),
+        ]
         return args
 
+    def _hdf5_test_env(self):
+        """Return dict of HDF5/LowFive env vars needed to run the tests."""
+        lowfive_prefix = self.spec['lowfive'].prefix
+        return {
+            'HDF5_PLUGIN_PATH': join_path(lowfive_prefix, 'lib'),
+            'HDF5_VOL_CONNECTOR': 'lowfive under_vol=0;under_info={};',
+        }
+
+    @run_after('build')
+    def install_python_package(self):
+        """Install the pure-Python orchestrator via pip."""
+        pip = which('pip')
+        pip('install', '--prefix={0}'.format(self.prefix),
+            '--no-deps', '--no-build-isolation', '.')
+
+    def check(self):
+        """Run ctest at build time (invoked by ``spack install --test=root``)."""
+        with working_dir(self.build_directory):
+            for key, val in self._hdf5_test_env().items():
+                os.environ[key] = val
+
+            ctest = which('ctest')
+            ctest('--output-on-failure')

@@ -1,8 +1,25 @@
+# ===========================================================================
+# CMake build for Wilkins C++ task libraries and examples.
+#
+# The Wilkins orchestrator itself is now a pure-Python package.  Install it
+# separately via pip:
+#
+#     pip install .            # from the repository root
+#     pip install -e .         # editable/development install
+#
+# This CMake build is only needed to compile the C++ example task libraries
+# (.hx shared libraries loaded by Henson at runtime).  The C++ wilkins
+# library and pybind11 bindings are deprecated and disabled by default.
+#
+# See pyproject.toml, README.md, and examples/lowfive/README.md for details.
+# ===========================================================================
+
 project                     (Wilkins)
 cmake_minimum_required      (VERSION 3.9)
 
-option                      (lowfive                   "Build Wilkins with Lowfive"         ON)
-option                      (wilkins_python            "Build Wilkins with python bindings" ON)
+option                      (lowfive                   "Build examples with LowFive"        ON)
+option                      (wilkins_python            "Build deprecated pybind11 bindings"  OFF)
+option                      (wilkins_cpp_lib           "Build deprecated C++ wilkins library" OFF)
 
 set                         (CMAKE_POSITION_INDEPENDENT_CODE ON)
 
@@ -84,9 +101,11 @@ if                          (lowfive)
   include_directories         (${HDF5_INCLUDE_DIR})
 endif                       (lowfive)
 
-#YAML-cpp
-add_subdirectory            (ext/yaml-cpp)
-set                         (libraries ${libraries} yaml-cpp::yaml-cpp)
+# YAML-cpp (only needed by the deprecated C++ wilkins library)
+if                          (wilkins_cpp_lib)
+  add_subdirectory            (ext/yaml-cpp)
+  set                         (libraries ${libraries} yaml-cpp::yaml-cpp)
+endif                       ()
 
 # Set include directories
 set                         (CMAKE_INCLUDE_SYSTEM_FLAG_CXX "-isystem")
@@ -99,11 +118,15 @@ set                         (libraries
                              ${CMAKE_THREAD_LIBS_INIT}
                              ${CMAKE_DL_LIBS})
 
-# subdirectories
-add_subdirectory            (src)
+# Deprecated C++ wilkins library (off by default)
+if                          (wilkins_cpp_lib)
+  add_subdirectory            (src)
+endif                       ()
+
+# Examples (C++ task libraries)
 add_subdirectory            (examples)
 
-#python bindings
+# Deprecated pybind11 bindings (off by default)
 if                          (wilkins_python)
     add_subdirectory        (ext/pybind11)
     add_subdirectory        (bindings/python)

@@ -1,3 +1,9 @@
+# ===========================================================================
+# DEPRECATED: The C++ wilkins library is no longer needed. Wilkins is now a
+# pure-Python package. Install via: pip install .
+# See pyproject.toml and README.md for details.
+# ===========================================================================
+
 add_library             (wilkins            comm.cpp
 					    context.cpp
 				            dataflow.cpp

@@ -1,18 +1,15 @@
-# ===========================================================================
-# DEPRECATED: This example script is superseded by the wilkins.master module,
-# which is installed as the 'wilkins-master' console entry point via pip.
+# ---------------------------------------------------------------------------
+# Wilkins workflow driver entry point.
 #
-# Preferred usage:
-#     mpirun -n $nprocs wilkins-master config_file [-p 0|1] [-v 0|1|2]
+# This module provides the ``main()`` function used by the
+# ``wilkins-master`` console script (installed via pip).
+#
+# Usage:
+#   mpirun -n $nprocs wilkins-master config.yaml [-p 0|1] [-v 0|1|2]
 #
 # Or equivalently:
-#     mpirun -n $nprocs python -m wilkins.master config_file [-p 0|1] [-v 0|1|2]
-#
-# This file is kept for reference only.
-# ===========================================================================
-
-# Original usage: mpirun -n $nprocs python wilkins-master.py config_file
-# config_files= [wilkins_prod_con.yaml, wilkins_prod_2cons.yaml]
+#   mpirun -n $nprocs python -m wilkins.master config.yaml [-p 0|1] [-v 0|1|2]
+# ---------------------------------------------------------------------------
 
 import os
 from glob import glob
@@ -20,29 +17,44 @@ import sys
 import argparse
 from collections import defaultdict
 
-import pyhenson as h
+try:
+    import pyhenson as h
+    HAS_HENSON = True
+except ImportError:
+    HAS_HENSON = False
+
 from mpi4py import MPI
-import lowfive
-from wilkins.utils import exec_task, import_from, get_passthru_lists, setup_passthru_callbacks
-from wilkins.workflow import Workflow
-from wilkins.wilkins import Wilkins, get_local_comm, get_intercomms
+
+try:
+    import lowfive
+    HAS_LOWFIVE = True
+except ImportError:
+    HAS_LOWFIVE = False
+
+from .utils import exec_task, import_from, get_passthru_lists, setup_passthru_callbacks
+from .workflow import Workflow
+from .wilkins import Wilkins, get_local_comm, get_intercomms
+
 
 def validate_environment():
-    # NB: Assuming that user has these env set either i)after spack installation or ii)sourcing vol-plugin.sh explicitly
-    # os.environ["HDF5_PLUGIN_PATH"] = "/Users/oyildiz/Work/software/lowfive/build/src"
-    # os.environ["HDF5_VOL_CONNECTOR"] = "lowfive under_vol=0;under_info={};"
-    if not glob(os.path.join(os.environ["HDF5_PLUGIN_PATH"], "liblowfive.*")):
-        raise RuntimeError("Bad HDF5_PLUGIN_PATH, lowfive library not found")
+    """Verify the HDF5 plugin path contains the LowFive library."""
+    plugin_path = os.environ.get("HDF5_PLUGIN_PATH", "")
+    if not plugin_path or not glob(os.path.join(plugin_path, "liblowfive.*")):
+        raise RuntimeError(
+            "Bad or missing HDF5_PLUGIN_PATH: lowfive library not found. "
+            "Set HDF5_PLUGIN_PATH to the directory containing liblowfive."
+        )
 
-    # needed for torch dataloader module to work on mac https://github.com/pytorch/pytorch/issues/46648
+    # Needed for torch dataloader module to work on macOS
+    # https://github.com/pytorch/pytorch/issues/46648
     if sys.platform == "darwin":
         print("Running on macOS")
-        import multiprocessing # pylint: disable=C0415
-
+        import multiprocessing
         multiprocessing.set_start_method("fork")
 
+
 def parse_arguments():
-    parser = argparse.ArgumentParser(description="Wilkins master script")
+    parser = argparse.ArgumentParser(description="Wilkins workflow driver")
     parser.add_argument(
         "-p",
         "--passthruSupport",
@@ -65,13 +77,19 @@ def parse_arguments():
 
     return parser.parse_args()
 
+
 def setup_logging(verbosity):
+    if not HAS_LOWFIVE:
+        return
     if verbosity == 1:
         lowfive.create_logger("info")
     elif verbosity == 2:
         lowfive.create_logger("debug")
 
+
 class FlowControl:
+    """Manages per-link I/O frequency policies for flow control."""
+
     def __init__(self, vol, comm, intercomms, serve_indices, flow_policies):
         self.comm = comm
         self.intercomms = intercomms
@@ -99,13 +117,21 @@ class FlowControl:
 
         return indices
 
+
 def setup_flow_control(vol, comm, intercomms, serve_indices, flow_policies):
     fc = FlowControl(vol, comm, intercomms, serve_indices, flow_policies)
     vol.set_serve_indices(fc.callback)
 
+
 def main():
+    """Main entry point for the Wilkins workflow driver."""
     validate_environment()
 
+    if not HAS_LOWFIVE:
+        raise RuntimeError(
+            "The 'lowfive' Python package is required to run the Wilkins driver. "
+            "Install it via Spack or from source."
+        )
 
     config_file = sys.argv[1]
     sys.argv = [sys.argv[0]] + sys.argv[2:]
@@ -116,7 +142,7 @@ def main():
     world = MPI.COMM_WORLD.Dup()
     rank = world.Get_rank()
 
-    # orc@22-11: generating procmap via YAML
+    # Generate procmap via YAML
     workflow = Workflow()
     Workflow.make_wflow_from_yaml(workflow, config_file)
     procs_yaml = []
@@ -137,27 +163,31 @@ def main():
         puppets.append((task_exec, node.args))
         if node.actions:
             actions.append((node.func, node.actions))
-        # bookkeeping of tasks belonging to the execution group
+        # Bookkeeping of tasks belonging to the execution group
         if rank >= node.start_proc and rank < node.start_proc + node.nprocs:
             my_tasks.append(i)
             passthru_files = node.passthru_files
         i = i + 1
+
+    if not HAS_HENSON:
+        raise RuntimeError(
+            "The 'pyhenson' package is required to run the Wilkins driver. "
+            "Install Henson and its Python bindings via Spack or from source."
+        )
 
     pm = h.ProcMap(world, procs_yaml)
     nm = h.NameMap()
 
     wilkins = Wilkins(MPI.COMM_WORLD, config_file)
 
-    # orc@31-03: adding for the new control logic: consumer looping until there are files
+    # Consumer looping until there are files
     wlk_producer = -1
-    wlk_consumer = (
-        []
-    )  # orc@25-07: making this an array for fanin cases as same consumer connected to multiple producer instances
+    wlk_consumer = []
     vol = None
     pl_prod = []
     pl_con = []
     serve_indices = []
-    # NB: In some cases, L5 comms should only include subset of processes (e.g., rank 0 from LPS)
+    # In some cases, L5 comms should only include subset of processes
     io_proc = wilkins.is_io_proc()
     if io_proc == 1:
         comm = get_local_comm(wilkins)
@@ -168,50 +198,45 @@ def main():
         exec_group = []
         set_si = 0
 
-        flow_policies = defaultdict(
-            list
-        )  # key: prod_name value: (flowPolicy, intercomm index)
-        passthru_list = defaultdict(
-            list
-        )  # key: exec_group value: (prodIndex, conIndex, filename) #orc@09-06: added for passthru support
+        flow_policies = defaultdict(list)
+        passthru_list = defaultdict(list)
         flow_exec_group = []
-        # support for reading/writing files from/to disk (without matching links)
+
+        # Support for reading/writing files from/to disk (without matching links)
         for pf in passthru_files:
             vol.set_passthru(pf[0], pf[1])
+
         for prop in l5_props:
-            # print(prop.filename, prop.dset, prop.producer, prop.consumer, prop.execGroup, prop.memory, prop.prodIndex, prop.conIndex, prop.zerocopy, prop.flowPolicy)
-            if (
-                prop.memory == 1
-            ):  # TODO: L5 doesn't support both memory and passthru at the moment. This logic might change once L5 supports both modes.
+            if prop.memory == 1:
                 vol.set_memory(prop.filename, prop.dset)
             else:
                 vol.set_passthru(prop.filename, prop.dset)
-                # orc@09-06: constructing the passthru list
                 if not passthru_list.get(prop.execGroup):
                     passthru_list[prop.execGroup].append(
                         (prop.prodIndex, prop.conIndex, prop.filename)
                     )
+
             if prop.consumer == 1 and not any(
                 x in prop.execGroup for x in exec_group
-            ):  # orc: setting single intercomm per exec_group.
+            ):
                 if ensembles != 1:
                     vol.set_intercomm(prop.filename, prop.dset, prop.conIndex)
                 wlk_consumer.append(prop.conIndex)
                 exec_group.append(prop.execGroup)
-            if (
-                prop.producer == 1
-            ):  # NB: Task can be both producer and consumer.
+
+            if prop.producer == 1:
                 wlk_producer = 1
                 if prop.prodIndex not in serve_indices:
                     serve_indices.append(prop.prodIndex)
                 if prop.zerocopy == 1:
                     vol.set_zerocopy(prop.filename, prop.dset)
-            # adding flow control logic
+
+            # Flow control logic
             if (
                 prop.producer == 1
                 and prop.flowPolicy != 1
                 and not any(x in prop.execGroup for x in flow_exec_group)
-            ):  # setting single flow control policy per exec_group
+            ):
                 prod_name = prop.execGroup.split(":")[0]
                 flow_exec_group.append(prop.execGroup)
                 flow_policies[prod_name].append(
@@ -221,30 +246,28 @@ def main():
         def bsa_cb():
             return serve_indices
 
-        # if any flow control policies, handling them here.
+        # If any flow control policies, handle them here
         for fp in flow_policies:
             if wilkins.my_node(fp):
-                setup_flow_control(vol, comm, intercomms, serve_indices, flow_policies.get(fp))
+                setup_flow_control(
+                    vol, comm, intercomms, serve_indices, flow_policies.get(fp)
+                )
                 set_si = 1
 
-        if (
-            not set_si
-        ):  # NB: set serve_indices if not set within the flow control
+        if not set_si:
             vol.set_serve_indices(bsa_cb)
 
-        # orc@09-06: determining the mode.
+        # Determine passthru mode
         pl_prod, pl_con = get_passthru_lists(wilkins, passthru_list)
 
-        # if any cb actions, setting them here.
+        # If any callback actions, set them here
         for action in actions:
             if wilkins.my_node(action[0]):
                 file_name = action[1][0]
                 cb_func = action[1][1]
                 cb = import_from(file_name, cb_func)
                 try:
-                    cb(
-                        vol, local_rank, pl_con
-                    )  # NB: For more advanced callbacks with args, users would need to write their own wilkins.py
+                    cb(vol, local_rank, pl_con)
                 except TypeError:
                     cb(vol, local_rank)
 
@@ -277,6 +300,13 @@ def main():
         serve_indices,
         single_iter_passthru,
     )
+
+    # Ensure all ranks (including non-writer ranks that finish early)
+    # stay alive until the entire workflow completes.  Without this,
+    # early-exiting ranks trigger Python/HDF5 teardown (H5_term_library)
+    # while other ranks are still actively using LowFive, which kills
+    # the whole MPI job.
+    MPI.COMM_WORLD.Barrier()
 
 
 if __name__ == "__main__":

@@ -3,8 +3,50 @@ import os
 import time
 import importlib
 import fnmatch
+import ctypes
 
-import pyhenson as h
+try:
+    import pyhenson as h
+    HAS_HENSON = True
+except ImportError:
+    HAS_HENSON = False
+
+
+def _h5close():
+    """Force HDF5 library shutdown while spdlog is still alive.
+
+    At process exit the following teardown sequence occurs:
+
+      1. Python atexit handlers (LIFO) — lowfive registers
+         ``unset_vol_callbacks`` here.
+      2. Python interpreter shutdown — C++ static objects that were
+         allocated from Python (including spdlog's global registry and
+         its mutex) are destroyed.
+      3. C-level ``atexit`` handlers — HDF5's ``H5_term_library`` runs,
+         which calls ``H5P_close`` → ``H5VL_free_connector_info`` →
+         ``LowFive::VOLBase::_info_free`` → ``spdlog::get()``.
+
+    Because step 3 happens *after* step 2 the spdlog mutex is already
+    invalid, resulting in::
+
+        mutex lock failed: Invalid argument
+
+    This is not specific to macOS or to the Python port; any Python
+    process that loads LowFive (and therefore both HDF5 and spdlog) is
+    affected.  The original ``wilkins-master.py`` had the same latent
+    issue.
+
+    Calling ``H5close()`` here — while the interpreter is still fully
+    alive — forces HDF5 to tear down all internal state so that
+    ``H5_term_library`` becomes a no-op at C ``atexit`` time.
+    """
+    try:
+        _lib = ctypes.CDLL(None)
+        _lib.H5close()
+    except (OSError, AttributeError):
+        # H5close not found (HDF5 not loaded) or call failed — nothing to do.
+        pass
+
 
 def get_source_index(pl_con, target_filename):
     if target_filename in pl_con:
@@ -125,6 +167,11 @@ def exec_task(
     if exec_name.endswith(".py"):
         python_puppet = True
     else:
+        if not HAS_HENSON:
+            raise RuntimeError(
+                f"Cannot load C++ puppet '{exec_name}': pyhenson is not installed. "
+                f"Either install pyhenson or use a Python (.py) task script."
+            )
         my_puppet = h.Puppet(puppets[my_tasks[0]][0], task_args, pm, nm)
 
     if wlk_consumer:
@@ -223,3 +270,9 @@ def exec_task(
     # if producer hasn't issued a done signal yet (for cycle topology)
     if wlk_producer == 1 and not prod_done:
         vol.producer_done()
+
+    # Force HDF5 to shut down while LowFive's spdlog is still alive.
+    # Without this, HDF5's C-level atexit handler (H5_term_library) runs
+    # after Python teardown has destroyed spdlog's mutex, causing a crash
+    # in LowFive::VOLBase::_info_free → spdlog::get().
+    _h5close()

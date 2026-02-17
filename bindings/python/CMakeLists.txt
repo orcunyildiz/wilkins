@@ -1,3 +1,9 @@
+# ===========================================================================
+# DEPRECATED: The pybind11 pywilkins module is no longer needed. Wilkins is
+# now a pure-Python package. Install via: pip install .
+# See pyproject.toml and README.md for details.
+# ===========================================================================
+
 list                        (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
 find_package                (MPI4Py)
 

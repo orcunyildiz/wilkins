@@ -1,3 +1,3 @@
-mpirun -n 3 -l python -u wilkins-master.py wilkins_cycle.yaml 
+mpirun -n 3 -l wilkins-master wilkins_cycle.yaml
 
 

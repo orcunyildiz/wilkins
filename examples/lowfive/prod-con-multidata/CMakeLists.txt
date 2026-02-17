@@ -1,3 +1,10 @@
+# ===========================================================================
+# DEPRECATED: This example uses the C++ Wilkins API directly (MPMD mode).
+# It is retained for reference only.  The C++ Wilkins library is no longer
+# built by default.  See flow-control/, cycle/, and ensembles/ for examples
+# that work with the new Python Wilkins orchestrator.
+# ===========================================================================
+
 set                         (targets   producer consumer producer_1 consumer_1_2 consumer_2_2 producer_1_2 producer_2_2 consumer_1)
 
 foreach                     (t ${targets})

@@ -1,3 +1,8 @@
+# ---------------------------------------------------------------------------
+# Python task example (MPMD mode -- tasks launched as separate MPI programs).
+# Run with:  mpirun -np 3 -l python ./prod.py : -np 1 python ./con.py
+# ---------------------------------------------------------------------------
+
 message("Building python example")
 
 install                     (FILES

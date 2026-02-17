@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wilkins"
+version = "1.0.0"
+description = "Wilkins: an in situ workflow system for heterogeneous task specification and execution"
+readme = "README.md"
+license = {text = "BSD-3-Clause"}
+requires-python = ">=3.8"
+authors = [
+    {name = "Orcun Yildiz"},
+    {name = "Tom Peterka"},
+]
+keywords = ["workflow", "in-situ", "HPC", "MPI", "HDF5", "LowFive"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: POSIX",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+]
+
+dependencies = [
+    "mpi4py",
+    "pyyaml",
+]
+
+[project.optional-dependencies]
+lowfive = [
+    # lowfive Python bindings -- installed separately (e.g., via Spack)
+]
+henson = [
+    # pyhenson -- installed separately (e.g., via Spack)
+    # Required only for executing C++ task codes compiled as shared objects.
+]
+dev = [
+    "pytest",
+]
+
+[project.scripts]
+wilkins-master = "wilkins.master:main"
+
+[project.urls]
+Homepage = "https://github.com/orcunyildiz/wilkins"
+Repository = "https://github.com/orcunyildiz/wilkins"
+
+[tool.setuptools.packages.find]
+where = ["bindings/python"]
+
+[tool.setuptools.package-data]
+wilkins = ["py.typed"]

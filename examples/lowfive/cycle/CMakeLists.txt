@@ -1,3 +1,8 @@
+# ---------------------------------------------------------------------------
+# Cyclic dataflow example: builds node0.hx, node1.hx, node2.hx.
+# Run with:  mpirun -n 3 -l wilkins-master wilkins_cycle.yaml
+# ---------------------------------------------------------------------------
+
 set                         (CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 add_library                 (node0 SHARED node0.cpp)
@@ -32,7 +37,7 @@ install                     (TARGETS node0 node1 node2
                             GROUP_READ GROUP_WRITE GROUP_EXECUTE
                             WORLD_READ WORLD_WRITE WORLD_EXECUTE)
 
-install                     (FILES wilkins_cycle.yaml run_cycle.sh ../wilkins-master.py
+install                     (FILES wilkins_cycle.yaml run_cycle.sh
                             DESTINATION ${CMAKE_INSTALL_PREFIX}/examples/lowfive/cycle/
                             PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
                             GROUP_READ GROUP_WRITE GROUP_EXECUTE
