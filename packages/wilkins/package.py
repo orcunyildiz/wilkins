@@ -33,6 +33,11 @@ class Wilkins(CMakePackage):
     depends_on('hdf5+mpi+hl@1.14', type='link')
     depends_on('henson@master+python+mpi-wrappers')
 
+    # This package installs Python modules into site-packages via pip.
+    # extends('python') adds a python-venv dependency that ensures Spack
+    # sets PYTHONPATH for all py-* deps during build and at runtime.
+    extends('python')
+
     # Python dependencies (needed for pip install of the orchestrator)
     depends_on('python@3.8:', type=('build', 'run'))
     depends_on('py-setuptools', type='build')
@@ -68,6 +73,18 @@ class Wilkins(CMakePackage):
         with working_dir(self.build_directory):
             for key, val in self._hdf5_test_env().items():
                 os.environ[key] = val
+
+            # The pip-installed wilkins orchestrator lives under our own
+            # prefix, which python-venv's setup_dependent_run_environment
+            # already adds for py-* deps but NOT for the package being
+            # built (since it isn't installed yet from Spack's perspective).
+            # Add it explicitly so ctest / mpirun can import wilkins.
+            python_pkg = self.spec['python'].package
+            for d in (python_pkg.platlib, python_pkg.purelib):
+                p = os.path.join(self.prefix, d)
+                if os.path.isdir(p):
+                    os.environ['PYTHONPATH'] = (
+                        p + ':' + os.environ.get('PYTHONPATH', ''))
 
             ctest = which('ctest')
             ctest('--output-on-failure')
