@@ -5,6 +5,8 @@
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 
+import os
+
 from spack.package import *
 
 
@@ -23,6 +25,7 @@ class Wilkins(CMakePackage):
     git      = "https://github.com/orcunyildiz/wilkins.git"
 
     version('master', branch='master')
+    version('refactoring', branch='refactoring-python')
 
     # Core dependencies
     depends_on('mpi')
@@ -40,12 +43,9 @@ class Wilkins(CMakePackage):
     depends_on('py-h5py', type=('build', 'run'))
 
     def cmake_args(self):
-        args = [
+        return [
             self.define('lowfive', True),
-            self.define('wilkins_python', False),
-            self.define('wilkins_cpp_lib', False),
         ]
-        return args
 
     def _hdf5_test_env(self):
         """Return dict of HDF5/LowFive env vars needed to run the tests."""
@@ -58,9 +58,10 @@ class Wilkins(CMakePackage):
     @run_after('build')
     def install_python_package(self):
         """Install the pure-Python orchestrator via pip."""
-        pip = which('pip')
-        pip('install', '--prefix={0}'.format(self.prefix),
-            '--no-deps', '--no-build-isolation', '.')
+        with working_dir(self.stage.source_path):
+            pip = which('pip')
+            pip('install', '--prefix={0}'.format(self.prefix),
+                '--no-deps', '--no-build-isolation', '.')
 
     def check(self):
         """Run ctest at build time (invoked by ``spack install --test=root``)."""

@@ -1,7 +1,8 @@
 #! /bin/bash
 
 bin_dir=$1
-topology=$2 #0: fanin #1: fanout #2: NxN
+src_dir=$2
+topology=$3 #0: fanin #1: fanout #2: NxN
 
 #Generating executables first
 cp "$bin_dir"/prod-ensemble.hx "$bin_dir"/prod-ensemble-inst0.hx
@@ -18,15 +19,15 @@ log=$(mktemp)
 if [ $topology == 0 ]
 then
     echo "mpirun -n 12 -l python -m wilkins.master wilkins_ensemble_test_fanin.yaml"
-    mpirun -n 12 -l python -m wilkins.master ../../tests/wilkins_ensemble_test_fanin.yaml 2>&1 | tee "$log"
+    mpirun -n 12 -l python -m wilkins.master "$src_dir"/tests/wilkins_ensemble_test_fanin.yaml 2>&1 | tee "$log"
 elif [ $topology == 1 ]
 then
     echo "mpirun -n 12 -l python -m wilkins.master wilkins_ensemble_test_fanout.yaml"
-    mpirun -n 12 -l python -m wilkins.master ../../tests/wilkins_ensemble_test_fanout.yaml 2>&1 | tee "$log"
+    mpirun -n 12 -l python -m wilkins.master "$src_dir"/tests/wilkins_ensemble_test_fanout.yaml 2>&1 | tee "$log"
 elif [ $topology == 2 ]
 then 
     echo "mpirun -n 12 -l python -m wilkins.master wilkins_ensemble_test_NxN.yaml"
-    mpirun -n 12 -l python -m wilkins.master ../../tests/wilkins_ensemble_test_NxN.yaml 2>&1 | tee "$log"
+    mpirun -n 12 -l python -m wilkins.master "$src_dir"/tests/wilkins_ensemble_test_NxN.yaml 2>&1 | tee "$log"
 fi
 
 retval=${PIPESTATUS[0]}

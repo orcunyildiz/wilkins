@@ -1,23 +1,24 @@
 #! /bin/bash
 
 bin_dir=$1
-differentFiles=$2
-passthru=$3
+src_dir=$2
+differentFiles=$3
+passthru=$4
 
-cp ../../examples/lowfive/actions/passthru-actions.py .
+cp "$src_dir"/examples/lowfive/actions/passthru-actions.py .
 
 log=$(mktemp)
 
 if [ $differentFiles == 0 ]; then
     echo "mpirun -n 2 -l python -m wilkins.master wilkins_stateless_test_singleFile.yaml"
-    mpirun -n 2 -l python -m wilkins.master ../../tests/wilkins_stateless_test_singleFile.yaml 2>&1 | tee "$log"
+    mpirun -n 2 -l python -m wilkins.master "$src_dir"/tests/wilkins_stateless_test_singleFile.yaml 2>&1 | tee "$log"
 else
     if [ $passthru == 0 ]; then
         echo "mpirun -n 2 -l python -m wilkins.master wilkins_stateless_test.yaml"
-        mpirun -n 2 -l python -m wilkins.master ../../tests/wilkins_stateless_test.yaml 2>&1 | tee "$log"
+        mpirun -n 2 -l python -m wilkins.master "$src_dir"/tests/wilkins_stateless_test.yaml 2>&1 | tee "$log"
     else
         echo "mpirun -n 7 -l python -m wilkins.master wilkins_stateless_test_passthru.yaml"
-        mpirun -n 7 -l python -m wilkins.master ../../tests/wilkins_stateless_test_passthru.yaml 2>&1 | tee "$log"
+        mpirun -n 7 -l python -m wilkins.master "$src_dir"/tests/wilkins_stateless_test_passthru.yaml 2>&1 | tee "$log"
     fi
 fi
 

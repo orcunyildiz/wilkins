@@ -14,8 +14,8 @@
 # See pyproject.toml, README.md, and examples/lowfive/README.md for details.
 # ===========================================================================
 
-project                     (Wilkins)
 cmake_minimum_required      (VERSION 3.9)
+project                     (Wilkins)
 
 option                      (lowfive                   "Build examples with LowFive"        ON)
 option                      (wilkins_python            "Build deprecated pybind11 bindings"  OFF)

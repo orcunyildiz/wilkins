@@ -1,18 +1,19 @@
 #! /bin/bash
 
 bin_dir=$1
-passthru=$2
+src_dir=$2
+passthru=$3
 
-cp ../../examples/lowfive/actions/passthru-actions.py .
+cp "$src_dir"/examples/lowfive/actions/passthru-actions.py .
 
 log=$(mktemp)
 
 if [ $passthru == 0 ]; then
     echo "mpirun -n 3 -l python -m wilkins.master wilkins_cycle_test_memory.yaml"
-    mpirun -n 3 -l python -m wilkins.master ../../tests/wilkins_cycle_test_memory.yaml 2>&1 | tee "$log"
+    mpirun -n 3 -l python -m wilkins.master "$src_dir"/tests/wilkins_cycle_test_memory.yaml 2>&1 | tee "$log"
 else
     echo "mpirun -n 3 -l python -m wilkins.master wilkins_cycle_test_passthru.yaml"
-    mpirun -n 3 -l python -m wilkins.master ../../tests/wilkins_cycle_test_passthru.yaml 2>&1 | tee "$log"
+    mpirun -n 3 -l python -m wilkins.master "$src_dir"/tests/wilkins_cycle_test_passthru.yaml 2>&1 | tee "$log"
 fi
 
 retval=${PIPESTATUS[0]}

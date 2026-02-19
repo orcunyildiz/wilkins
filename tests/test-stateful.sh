@@ -1,28 +1,29 @@
 #! /bin/bash
 
 bin_dir=$1
-differentFiles=$2
-subset=$3
-passthru=$4
-cp ../../examples/lowfive/actions/passthru-actions.py .
+src_dir=$2
+differentFiles=$3
+subset=$4
+passthru=$5
+cp "$src_dir"/examples/lowfive/actions/passthru-actions.py .
 
 log=$(mktemp)
 
 if [ $differentFiles == 0 ]; then
     echo "mpirun -n 2 -l python -m wilkins.master wilkins_stateful_test_singleFile.yaml"
-    mpirun -n 2 -l python -m wilkins.master ../../tests/wilkins_stateful_test_singleFile.yaml 2>&1 | tee "$log"
+    mpirun -n 2 -l python -m wilkins.master "$src_dir"/tests/wilkins_stateful_test_singleFile.yaml 2>&1 | tee "$log"
 else
     if [ $subset == 0 ]; then
         if [ $passthru == 0 ]; then
             echo "mpirun -n 2 -l python -m wilkins.master wilkins_stateful_test.yaml"
-            mpirun -n 2 -l python -m wilkins.master ../../tests/wilkins_stateful_test.yaml 2>&1 | tee "$log"
+            mpirun -n 2 -l python -m wilkins.master "$src_dir"/tests/wilkins_stateful_test.yaml 2>&1 | tee "$log"
         else
             echo "mpirun -n 5 -l python -m wilkins.master wilkins_stateful_test_passthru.yaml"
-            mpirun -n 5 -l python -m wilkins.master ../../tests/wilkins_stateful_test_passthru.yaml 2>&1 | tee "$log"
+            mpirun -n 5 -l python -m wilkins.master "$src_dir"/tests/wilkins_stateful_test_passthru.yaml 2>&1 | tee "$log"
         fi
     else
         echo "mpirun -n 5 -l python -m wilkins.master wilkins_stateful_test_subsetWriters.yaml"
-        mpirun -n 5 -l python -m wilkins.master ../../tests/wilkins_stateful_test_subsetWriters.yaml 2>&1 | tee "$log"
+        mpirun -n 5 -l python -m wilkins.master "$src_dir"/tests/wilkins_stateful_test_subsetWriters.yaml 2>&1 | tee "$log"
     fi
 fi
 

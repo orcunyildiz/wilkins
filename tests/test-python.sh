@@ -1,21 +1,22 @@
 #! /bin/bash
 
 bin_dir=$1
-passthru=$2
-workflowType=$3 #0: prod-con 1: prod-2cons 2: 2prod-cons
+src_dir=$2
+passthru=$3
+workflowType=$4 #0: prod-con 1: prod-2cons 2: 2prod-cons
 
-cp ../../examples/lowfive/actions/passthru-actions.py .
+cp "$src_dir"/examples/lowfive/actions/passthru-actions.py .
 
-cp ../../examples/python/producer.py producer-test.py
-cp ../../examples/python/consumer.py consumer-test.py
+cp "$src_dir"/examples/python/producer.py producer-test.py
+cp "$src_dir"/examples/python/consumer.py consumer-test.py
 
-cp ../../tests/prod-test.py .
-cp ../../tests/con1-test.py .
-cp ../../tests/con2-test.py .
+cp "$src_dir"/tests/prod-test.py .
+cp "$src_dir"/tests/con1-test.py .
+cp "$src_dir"/tests/con2-test.py .
 
-cp ../../tests/prod1-test.py .
-cp ../../tests/prod2-test.py .
-cp ../../tests/con-test.py .
+cp "$src_dir"/tests/prod1-test.py .
+cp "$src_dir"/tests/prod2-test.py .
+cp "$src_dir"/tests/con-test.py .
 
 log=$(mktemp)
 
@@ -23,29 +24,29 @@ if [ "$workflowType" == "0" ]; then
     # prod-con
     if [ $passthru == 0 ]; then
     	echo "mpirun -n 2 -l python -m wilkins.master wilkins_python_test_memory.yaml"
-    	mpirun -n 2 -l python -m wilkins.master ../../tests/wilkins_python_test_memory.yaml 2>&1 | tee "$log"
+    	mpirun -n 2 -l python -m wilkins.master "$src_dir"/tests/wilkins_python_test_memory.yaml 2>&1 | tee "$log"
     else
     	echo "mpirun -n 2 -l python -m wilkins.master wilkins_python_test_passthru.yaml"
-    	mpirun -n 2 -l python -m wilkins.master ../../tests/wilkins_python_test_passthru.yaml 2>&1 | tee "$log"
+    	mpirun -n 2 -l python -m wilkins.master "$src_dir"/tests/wilkins_python_test_passthru.yaml 2>&1 | tee "$log"
     fi
 elif [ "$workflowType" == "1" ]; then
     # prod-2cons
     if [ $passthru == 0 ]; then
         echo "mpirun -n 3 -l python -m wilkins.master wilkins_python_test_prod2cons_memory.yaml"
-        mpirun -n 3 -l python -m wilkins.master ../../tests/wilkins_python_test_prod2cons_memory.yaml 2>&1 | tee "$log"
+        mpirun -n 3 -l python -m wilkins.master "$src_dir"/tests/wilkins_python_test_prod2cons_memory.yaml 2>&1 | tee "$log"
     else
         echo "mpirun -n 3 -l python -m wilkins.master wilkins_python_test_prod2cons_passthru.yaml"
-        mpirun -n 3 -l python -m wilkins.master ../../tests/wilkins_python_test_prod2cons_passthru.yaml 2>&1 | tee "$log"
+        mpirun -n 3 -l python -m wilkins.master "$src_dir"/tests/wilkins_python_test_prod2cons_passthru.yaml 2>&1 | tee "$log"
     fi
 
 elif [ "$workflowType" == "2" ]; then
     # 2prod-cons
     if [ $passthru == 0 ]; then
         echo "mpirun -n 3 -l python -m wilkins.master wilkins_python_test_2prodscon_memory.yaml"
-        mpirun -n 3 -l python -m wilkins.master ../../tests/wilkins_python_test_2prodscon_memory.yaml 2>&1 | tee "$log"
+        mpirun -n 3 -l python -m wilkins.master "$src_dir"/tests/wilkins_python_test_2prodscon_memory.yaml 2>&1 | tee "$log"
     else
         echo "mpirun -n 3 -l python -m wilkins.master wilkins_python_test_2prodscon_passthru.yaml"
-        mpirun -n 3 -l python -m wilkins.master ../../tests/wilkins_python_test_2prodscon_passthru.yaml 2>&1 | tee "$log"
+        mpirun -n 3 -l python -m wilkins.master "$src_dir"/tests/wilkins_python_test_2prodscon_passthru.yaml 2>&1 | tee "$log"
     fi
 fi
 retval=${PIPESTATUS[0]}
