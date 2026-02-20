@@ -1,0 +1,529 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Execution Model &mdash; Wilkins 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=8d563738"></script>
+      <script src="../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Data Transport" href="data-transport.html" />
+    <link rel="prev" title="Workflow Graph" href="workflow-graph.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Wilkins
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/installation.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../getting-started/installation.html#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting-started/installation.html#installing-with-spack-recommended">Installing with Spack (recommended)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../getting-started/installation.html#step-1-install-spack">Step 1 — Install Spack</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../getting-started/installation.html#step-2-register-the-wilkins-and-lowfive-repos">Step 2 — Register the Wilkins and LowFive repos</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../getting-started/installation.html#step-3-install">Step 3 — Install</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../getting-started/installation.html#step-4-load">Step 4 — Load</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../getting-started/installation.html#installing-with-pip">Installing with pip</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting-started/installation.html#verifying-the-installation">Verifying the installation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/quickstart.html">Quickstart</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../getting-started/quickstart.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting-started/quickstart.html#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting-started/quickstart.html#step-1-write-the-producer">Step 1 — Write the producer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting-started/quickstart.html#step-2-write-the-consumer">Step 2 — Write the consumer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting-started/quickstart.html#step-3-write-the-yaml-configuration">Step 3 — Write the YAML configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting-started/quickstart.html#step-4-run-the-workflow">Step 4 — Run the workflow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting-started/quickstart.html#what-just-happened">What just happened?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting-started/quickstart.html#next-steps">Next steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/environment.html">Environment Setup</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../getting-started/environment.html#required-environment-variables">Required environment variables</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../getting-started/environment.html#hdf5-vol-connector"><code class="docutils literal notranslate"><span class="pre">HDF5_VOL_CONNECTOR</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../getting-started/environment.html#hdf5-plugin-path"><code class="docutils literal notranslate"><span class="pre">HDF5_PLUGIN_PATH</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../getting-started/environment.html#spack-installations">Spack installations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting-started/environment.html#verifying-the-environment">Verifying the environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting-started/environment.html#macos-note">macOS note</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting-started/environment.html#summary">Summary</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Concepts</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="architecture.html">Architecture</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="architecture.html#components">Components</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="architecture.html#workflow-driver-wilkins-master">1. Workflow driver (<code class="docutils literal notranslate"><span class="pre">wilkins-master</span></code>)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="architecture.html#lowfive-data-transport-layer">2. LowFive — data transport layer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="architecture.html#user-task-codes">3. User task codes</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="architecture.html#how-it-fits-together">How it fits together</a></li>
+<li class="toctree-l2"><a class="reference internal" href="architecture.html#design-principles">Design principles</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="workflow-graph.html">Workflow Graph</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="workflow-graph.html#nodes">Nodes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="workflow-graph.html#links-edges">Links (edges)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="workflow-graph.html#wildcard-matching">Wildcard matching</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="workflow-graph.html#ports">Ports</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="workflow-graph.html#output-ports-outports">Output ports (<code class="docutils literal notranslate"><span class="pre">outports</span></code>)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="workflow-graph.html#input-ports-inports">Input ports (<code class="docutils literal notranslate"><span class="pre">inports</span></code>)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="workflow-graph.html#automatic-link-generation">Automatic link generation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="workflow-graph.html#execution-groups">Execution groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="workflow-graph.html#orphan-ports">Orphan ports</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Execution Model</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#master-mode-default">Master mode (default)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#process-allocation">Process allocation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#subset-writers">Subset writers</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#python-tasks">Python tasks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#c-tasks-henson">C++ tasks (Henson)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#consumer-loop">Consumer loop</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#stateful-vs-stateless-consumers">Stateful vs. stateless consumers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#stateful-consumers">Stateful consumers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#stateless-consumers">Stateless consumers</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#passthru-mode-file-based">Passthru mode (file-based)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#see-also">See also</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="data-transport.html">Data Transport</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="data-transport.html#the-hdf5-vol-architecture">The HDF5 VOL architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data-transport.html#transport-modes">Transport modes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="data-transport.html#memory-mode-in-situ">Memory mode (in situ)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="data-transport.html#file-mode-passthru">File mode (passthru)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="data-transport.html#choosing-a-mode">Choosing a mode</a></li>
+<li class="toctree-l3"><a class="reference internal" href="data-transport.html#mode-consistency">Mode consistency</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="data-transport.html#zero-copy-transfer">Zero-copy transfer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data-transport.html#mpi-intercommunicators">MPI intercommunicators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data-transport.html#see-also">See also</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="flow-control.html">Flow Control</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="flow-control.html#the-problem">The problem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="flow-control.html#strategies">Strategies</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="flow-control.html#all-io-freq-1">All (<code class="docutils literal notranslate"><span class="pre">io_freq:</span> <span class="pre">1</span></code>)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="flow-control.html#some-io-freq-n-where-n-1">Some (<code class="docutils literal notranslate"><span class="pre">io_freq:</span> <span class="pre">N</span></code> where N &gt; 1)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="flow-control.html#latest-io-freq-latest">Latest (<code class="docutils literal notranslate"><span class="pre">io_freq:</span> <span class="pre">&quot;latest&quot;</span></code>)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="flow-control.html#per-link-configuration">Per-link configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="flow-control.html#implementation">Implementation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="flow-control.html#see-also">See also</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../user-guide/yaml-reference.html">YAML Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/yaml-reference.html#top-level-structure">Top-level structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/yaml-reference.html#task-fields">Task fields</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/yaml-reference.html#output-port-fields-outports">Output port fields (<code class="docutils literal notranslate"><span class="pre">outports</span></code>)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/yaml-reference.html#dataset-fields-outport">Dataset fields (outport)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/yaml-reference.html#input-port-fields-inports">Input port fields (<code class="docutils literal notranslate"><span class="pre">inports</span></code>)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/yaml-reference.html#dataset-fields-inport">Dataset fields (inport)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/yaml-reference.html#complete-example">Complete example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/yaml-reference.html#link-generation-rules">Link generation rules</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../user-guide/python-tasks.html">Writing Python Tasks</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/python-tasks.html#basic-structure">Basic structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/python-tasks.html#producer-example">Producer example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/python-tasks.html#consumer-example">Consumer example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/python-tasks.html#using-task-arguments">Using task arguments</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/python-tasks.html#dynamic-filenames">Dynamic filenames</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/python-tasks.html#using-mpi-within-tasks">Using MPI within tasks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/python-tasks.html#yaml-configuration">YAML configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/python-tasks.html#how-tasks-are-launched">How tasks are launched</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/python-tasks.html#tips">Tips</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../user-guide/cpp-tasks.html">Writing C++ Tasks</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/cpp-tasks.html#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/cpp-tasks.html#compilation">Compilation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/cpp-tasks.html#linux">Linux</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/cpp-tasks.html#macos">macOS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/cpp-tasks.html#cmake">CMake</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/cpp-tasks.html#task-structure">Task structure</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/cpp-tasks.html#producer">Producer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/cpp-tasks.html#consumer">Consumer</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/cpp-tasks.html#yaml-configuration">YAML configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/cpp-tasks.html#henson-coroutines">Henson coroutines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/cpp-tasks.html#mixing-python-and-c-tasks">Mixing Python and C++ tasks</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../user-guide/topologies.html">Workflow Topologies</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/topologies.html#pipeline">Pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/topologies.html#fan-out-one-producer-multiple-consumers">Fan-out (one producer, multiple consumers)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/topologies.html#fan-in-multiple-producers-one-consumer">Fan-in (multiple producers, one consumer)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/topologies.html#ensembles">Ensembles</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/topologies.html#nxn-ensemble-3-producers-3-consumers">NxN ensemble (3 producers, 3 consumers)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/topologies.html#ensemble-fan-out-2-producers-4-consumers">Ensemble fan-out (2 producers, 4 consumers)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/topologies.html#ensemble-fan-in-4-producers-2-consumers">Ensemble fan-in (4 producers, 2 consumers)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/topologies.html#ensemble-filename-convention">Ensemble filename convention</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/topologies.html#cycles">Cycles</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/topologies.html#process-count-formula">Process count formula</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../user-guide/custom-actions.html">Custom Actions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/custom-actions.html#when-are-actions-needed">When are actions needed?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/custom-actions.html#configuring-actions-in-yaml">Configuring actions in YAML</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/custom-actions.html#built-in-passthru-actions">Built-in passthru actions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/custom-actions.html#producer-callback">Producer callback</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/custom-actions.html#consumer-callback">Consumer callback</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/custom-actions.html#writing-custom-callbacks">Writing custom callbacks</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/custom-actions.html#example-custom-write-trigger">Example: custom write trigger</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/custom-actions.html#cycle-topologies-with-actions">Cycle topologies with actions</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../user-guide/running.html">Running Workflows</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/running.html#basic-invocation">Basic invocation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/running.html#command-line-options">Command-line options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/running.html#calculating-the-process-count">Calculating the process count</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/running.html#environment-setup">Environment setup</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/running.html#working-directory">Working directory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/running.html#example-running-the-python-producer-consumer">Example: running the Python producer-consumer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/running.html#example-running-with-passthru-and-verbosity">Example: running with passthru and verbosity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/running.html#troubleshooting">Troubleshooting</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/running.html#runtimeerror-bad-or-missing-hdf5-plugin-path"><code class="docutils literal notranslate"><span class="pre">RuntimeError:</span> <span class="pre">Bad</span> <span class="pre">or</span> <span class="pre">missing</span> <span class="pre">HDF5_PLUGIN_PATH</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/running.html#runtimeerror-the-lowfive-python-package-is-required"><code class="docutils literal notranslate"><span class="pre">RuntimeError:</span> <span class="pre">The</span> <span class="pre">'lowfive'</span> <span class="pre">Python</span> <span class="pre">package</span> <span class="pre">is</span> <span class="pre">required</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/running.html#runtimeerror-the-pyhenson-package-is-required"><code class="docutils literal notranslate"><span class="pre">RuntimeError:</span> <span class="pre">The</span> <span class="pre">'pyhenson'</span> <span class="pre">package</span> <span class="pre">is</span> <span class="pre">required</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/running.html#workflow-hangs">Workflow hangs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/running.html#mutex-lock-failed-invalid-argument-at-exit"><code class="docutils literal notranslate"><span class="pre">mutex</span> <span class="pre">lock</span> <span class="pre">failed:</span> <span class="pre">Invalid</span> <span class="pre">argument</span></code> at exit</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../reference/python-api.html">Python API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../reference/python-api.html#workflow"><code class="docutils literal notranslate"><span class="pre">Workflow</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../reference/python-api.html#constructor">Constructor</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/python-api.html#attributes">Attributes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/python-api.html#methods">Methods</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../reference/python-api.html#workflownode"><code class="docutils literal notranslate"><span class="pre">WorkflowNode</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../reference/python-api.html#id1">Attributes</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../reference/python-api.html#workflowlink"><code class="docutils literal notranslate"><span class="pre">WorkflowLink</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../reference/python-api.html#id2">Attributes</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../reference/python-api.html#lowfiveport"><code class="docutils literal notranslate"><span class="pre">LowFivePort</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../reference/python-api.html#id3">Attributes</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../reference/python-api.html#wilkins"><code class="docutils literal notranslate"><span class="pre">Wilkins</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../reference/python-api.html#id4">Constructor</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/python-api.html#id5">Methods</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../reference/python-api.html#lowfiveproperty"><code class="docutils literal notranslate"><span class="pre">LowFiveProperty</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../reference/python-api.html#id6">Attributes</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../reference/python-api.html#dataflow"><code class="docutils literal notranslate"><span class="pre">Dataflow</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../reference/python-api.html#id7">Constructor</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/python-api.html#id8">Methods</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../reference/python-api.html#comm"><code class="docutils literal notranslate"><span class="pre">Comm</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../reference/python-api.html#id9">Constructor</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/python-api.html#id10">Methods</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../reference/python-api.html#wilkinssizes"><code class="docutils literal notranslate"><span class="pre">WilkinsSizes</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../reference/python-api.html#id11">Attributes</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../reference/python-api.html#module-level-functions">Module-level functions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../reference/python-api.html#get-local-comm-wilkins-comm"><code class="docutils literal notranslate"><span class="pre">get_local_comm(wilkins)</span> <span class="pre">-&gt;</span> <span class="pre">Comm</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/python-api.html#get-intercomms-wilkins-list"><code class="docutils literal notranslate"><span class="pre">get_intercomms(wilkins)</span> <span class="pre">-&gt;</span> <span class="pre">list</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/python-api.html#comm-rank-comm-int"><code class="docutils literal notranslate"><span class="pre">comm_rank(comm)</span> <span class="pre">-&gt;</span> <span class="pre">int</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/python-api.html#comm-size-comm-int"><code class="docutils literal notranslate"><span class="pre">comm_size(comm)</span> <span class="pre">-&gt;</span> <span class="pre">int</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../reference/python-api.html#constants">Constants</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/citation.html">Citation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../reference/citation.html#bibtex">BibTeX</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../reference/citation.html#related-software">Related software</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/faq.html">FAQ</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../reference/faq.html#installation">Installation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../reference/faq.html#do-i-need-to-install-lowfive-and-henson-separately">Do I need to install LowFive and Henson separately?</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/faq.html#which-hdf5-version-do-i-need">Which HDF5 version do I need?</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/faq.html#does-wilkins-work-on-macos">Does Wilkins work on macOS?</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../reference/faq.html#configuration">Configuration</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../reference/faq.html#how-do-i-know-how-many-mpi-processes-to-use">How do I know how many MPI processes to use?</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/faq.html#can-i-use-wildcards-in-dataset-names">Can I use wildcards in dataset names?</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/faq.html#what-happens-if-i-set-both-metadata-0-and-passthru-0">What happens if I set both <code class="docutils literal notranslate"><span class="pre">metadata:</span> <span class="pre">0</span></code> and <code class="docutils literal notranslate"><span class="pre">passthru:</span> <span class="pre">0</span></code>?</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/faq.html#can-different-datasets-on-the-same-link-use-different-transport-modes">Can different datasets on the same link use different transport modes?</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/faq.html#what-does-filename-do-in-args">What does <code class="docutils literal notranslate"><span class="pre">{filename}</span></code> do in <code class="docutils literal notranslate"><span class="pre">args</span></code>?</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../reference/faq.html#data-transport">Data Transport</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../reference/faq.html#what-is-the-difference-between-memory-mode-and-file-mode">What is the difference between memory mode and file mode?</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/faq.html#do-i-need-to-modify-my-hdf5-code-to-work-with-wilkins">Do I need to modify my HDF5 code to work with Wilkins?</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/faq.html#what-is-zero-copy-mode">What is zero-copy mode?</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../reference/faq.html#execution">Execution</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../reference/faq.html#can-i-mix-python-and-c-tasks">Can I mix Python and C++ tasks?</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/faq.html#what-is-the-consumer-loop">What is the consumer loop?</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/faq.html#why-does-my-workflow-hang">Why does my workflow hang?</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../reference/faq.html#troubleshooting">Troubleshooting</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../reference/faq.html#runtimeerror-bad-or-missing-hdf5-plugin-path"><code class="docutils literal notranslate"><span class="pre">RuntimeError:</span> <span class="pre">Bad</span> <span class="pre">or</span> <span class="pre">missing</span> <span class="pre">HDF5_PLUGIN_PATH</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/faq.html#mutex-lock-failed-invalid-argument-at-exit"><code class="docutils literal notranslate"><span class="pre">mutex</span> <span class="pre">lock</span> <span class="pre">failed:</span> <span class="pre">Invalid</span> <span class="pre">argument</span></code> at exit</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/faq.html#warning-passthru-is-not-enabled-at-the-producer-side"><code class="docutils literal notranslate"><span class="pre">WARNING:</span> <span class="pre">Passthru</span> <span class="pre">is</span> <span class="pre">not</span> <span class="pre">enabled</span> <span class="pre">at</span> <span class="pre">the</span> <span class="pre">producer</span> <span class="pre">side</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../reference/faq.html#error-no-matching-link-found-for-the-inport-requesting-memory-mode"><code class="docutils literal notranslate"><span class="pre">ERROR:</span> <span class="pre">No</span> <span class="pre">matching</span> <span class="pre">link</span> <span class="pre">found</span> <span class="pre">for</span> <span class="pre">the</span> <span class="pre">inport</span> <span class="pre">...</span> <span class="pre">requesting</span> <span class="pre">memory</span> <span class="pre">mode</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Wilkins</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Execution Model</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/concepts/execution-model.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="execution-model">
+<h1>Execution Model<a class="headerlink" href="#execution-model" title="Link to this heading"></a></h1>
+<p>Wilkins supports running heterogeneous tasks — mixing Python and C++ codes — within a single MPI job. This page describes how tasks are launched and how they interact with the Wilkins runtime.</p>
+<section id="master-mode-default">
+<h2>Master mode (default)<a class="headerlink" href="#master-mode-default" title="Link to this heading"></a></h2>
+<p>In master mode, all tasks run within a single <code class="docutils literal notranslate"><span class="pre">mpirun</span></code> invocation, coordinated by the <code class="docutils literal notranslate"><span class="pre">wilkins-master</span></code> driver:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>mpirun<span class="w"> </span>-n<span class="w"> </span>&lt;total_procs&gt;<span class="w"> </span>wilkins-master<span class="w"> </span>config.yaml
+</pre></div>
+</div>
+<p>The driver:</p>
+<ol class="arabic simple">
+<li><p>Parses the YAML configuration and assigns each task a contiguous range of MPI ranks from <code class="docutils literal notranslate"><span class="pre">MPI_COMM_WORLD</span></code>.</p></li>
+<li><p>Creates MPI sub-communicators (one per task) and intercommunicators (one per producer-consumer execution group).</p></li>
+<li><p>Launches each task using <a class="reference external" href="https://github.com/henson-insitu/henson">Henson</a> coroutines, which provide cooperative multitasking within a single address space.</p></li>
+<li><p>Manages the <strong>consumer loop</strong>: after the initial task execution, consumers repeatedly poll for new data from producers until the producer signals completion.</p></li>
+</ol>
+<section id="process-allocation">
+<h3>Process allocation<a class="headerlink" href="#process-allocation" title="Link to this heading"></a></h3>
+<p>Processes are allocated sequentially in the order tasks appear in the YAML file. For example:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">tasks</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">func</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;./producer.py&quot;</span>
+<span class="w">    </span><span class="nt">nprocs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">func</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;./consumer1.py&quot;</span>
+<span class="w">    </span><span class="nt">nprocs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">func</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;./consumer2.py&quot;</span>
+<span class="w">    </span><span class="nt">nprocs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+</pre></div>
+</div>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Task</p></th>
+<th class="head"><p>Ranks</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>producer</p></td>
+<td><p>0, 1, 2</p></td>
+</tr>
+<tr class="row-odd"><td><p>consumer1</p></td>
+<td><p>3, 4</p></td>
+</tr>
+<tr class="row-even"><td><p>consumer2</p></td>
+<td><p>5</p></td>
+</tr>
+</tbody>
+</table>
+<p>Total processes required: <code class="docutils literal notranslate"><span class="pre">mpirun</span> <span class="pre">-n</span> <span class="pre">6</span> <span class="pre">wilkins-master</span> <span class="pre">config.yaml</span></code></p>
+</section>
+<section id="subset-writers">
+<h3>Subset writers<a class="headerlink" href="#subset-writers" title="Link to this heading"></a></h3>
+<p>For large simulations where not all producer processes generate output data, the <code class="docutils literal notranslate"><span class="pre">nwriters</span></code> field limits which processes participate in LowFive I/O:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">tasks</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">func</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;./producer.hx&quot;</span>
+<span class="w">    </span><span class="nt">nprocs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span>
+<span class="w">    </span><span class="nt">nwriters</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+</pre></div>
+</div>
+<p>Only the first <code class="docutils literal notranslate"><span class="pre">nwriters</span></code> processes of the producer join the LowFive communicator. The remaining processes skip I/O operations. This reduces communication overhead when only a subset of simulation processes produce data.</p>
+</section>
+</section>
+<section id="python-tasks">
+<h2>Python tasks<a class="headerlink" href="#python-tasks" title="Link to this heading"></a></h2>
+<p>Python task scripts must define a <code class="docutils literal notranslate"><span class="pre">main()</span></code> function:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="n">task_args</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="c1"># task_args is an optional list of command-line arguments</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+<p>The driver imports the script and calls <code class="docutils literal notranslate"><span class="pre">main()</span></code> directly. No compilation is needed. See <a class="reference internal" href="../user-guide/python-tasks.html"><span class="std std-doc">Writing Python Tasks</span></a> for details.</p>
+</section>
+<section id="c-tasks-henson">
+<h2>C++ tasks (Henson)<a class="headerlink" href="#c-tasks-henson" title="Link to this heading"></a></h2>
+<p>C++ tasks are compiled as shared objects (<code class="docutils literal notranslate"><span class="pre">.so</span></code> or <code class="docutils literal notranslate"><span class="pre">.hx</span></code> files) and linked with <a class="reference external" href="https://github.com/henson-insitu/henson">Henson</a>. They run as coroutines managed by the Henson runtime, which Wilkins integrates via the <code class="docutils literal notranslate"><span class="pre">pyhenson</span></code> Python bindings.</p>
+<p>C++ tasks use the HDF5 C API directly (not h5py). LowFive intercepts these calls just as it does for Python tasks. See <a class="reference internal" href="../user-guide/cpp-tasks.html"><span class="std std-doc">Writing C++ Tasks</span></a> for compilation details.</p>
+</section>
+<section id="consumer-loop">
+<h2>Consumer loop<a class="headerlink" href="#consumer-loop" title="Link to this heading"></a></h2>
+<p>In a typical in situ workflow, the producer runs iteratively (e.g., a simulation time-stepping loop), writing data at each step. The consumer processes this data as it becomes available.</p>
+<p>Wilkins implements this pattern through a <strong>consumer loop</strong> in the master driver:</p>
+<ol class="arabic simple">
+<li><p>The producer writes data via HDF5 calls. LowFive stores it in memory (or on disk in file mode).</p></li>
+<li><p>LowFive’s <code class="docutils literal notranslate"><span class="pre">serve_all()</span></code> makes the data available to consumers.</p></li>
+<li><p>The consumer calls <code class="docutils literal notranslate"><span class="pre">vol.get_filenames()</span></code> to check for new data.</p></li>
+<li><p>If data is available, the consumer’s <code class="docutils literal notranslate"><span class="pre">main()</span></code> is called again.</p></li>
+<li><p>When the producer finishes, it calls <code class="docutils literal notranslate"><span class="pre">vol.producer_done()</span></code>, which signals consumers to stop.</p></li>
+</ol>
+<p>This loop is managed entirely by the Wilkins driver — task codes do not need to implement any loop logic themselves. Wilkins handles iteration and termination detection internally, so tasks can focus on their computational work.</p>
+</section>
+<section id="stateful-vs-stateless-consumers">
+<h2>Stateful vs. stateless consumers<a class="headerlink" href="#stateful-vs-stateless-consumers" title="Link to this heading"></a></h2>
+<section id="stateful-consumers">
+<h3>Stateful consumers<a class="headerlink" href="#stateful-consumers" title="Link to this heading"></a></h3>
+<p>A stateful consumer is called repeatedly for each new dataset the producer generates. It can maintain state across iterations because <code class="docutils literal notranslate"><span class="pre">main()</span></code> is called multiple times within the same process. This is useful for consumers that accumulate results (e.g., computing running averages, building visualizations incrementally).</p>
+<p>The consumer loop in <code class="docutils literal notranslate"><span class="pre">wilkins-master</span></code> handles this automatically: after the initial <code class="docutils literal notranslate"><span class="pre">main()</span></code> call, the driver keeps polling for new data and re-invoking <code class="docutils literal notranslate"><span class="pre">main()</span></code>.</p>
+</section>
+<section id="stateless-consumers">
+<h3>Stateless consumers<a class="headerlink" href="#stateless-consumers" title="Link to this heading"></a></h3>
+<p>A stateless consumer processes exactly one dataset and does not need to persist state. This is the simpler case: <code class="docutils literal notranslate"><span class="pre">main()</span></code> is called once per data batch. If the producer writes multiple time steps, the consumer is invoked once per step.</p>
+<p>Both patterns use the same consumer loop mechanism — the distinction is in the task code’s design, not in the Wilkins configuration.</p>
+</section>
+</section>
+<section id="passthru-mode-file-based">
+<h2>Passthru mode (file-based)<a class="headerlink" href="#passthru-mode-file-based" title="Link to this heading"></a></h2>
+<p>When all ports on a link use passthru mode (<code class="docutils literal notranslate"><span class="pre">passthru:</span> <span class="pre">1,</span> <span class="pre">metadata:</span> <span class="pre">0</span></code>), data flows through actual HDF5 files on disk rather than in-memory metadata. This requires <strong>callback actions</strong> to synchronize the producer and consumer:</p>
+<ul class="simple">
+<li><p>The producer registers a <code class="docutils literal notranslate"><span class="pre">prod_callback</span></code> that signals downstream consumers after writing a file.</p></li>
+<li><p>The consumer registers a <code class="docutils literal notranslate"><span class="pre">con_callback</span></code> that blocks until the upstream producer signals data is ready.</p></li>
+</ul>
+<p>See <a class="reference internal" href="../user-guide/custom-actions.html"><span class="std std-doc">Custom Actions</span></a> for how to configure callback actions in YAML.</p>
+</section>
+<section id="see-also">
+<h2>See also<a class="headerlink" href="#see-also" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="../user-guide/python-tasks.html"><span class="std std-doc">Writing Python Tasks</span></a> — how to structure Python task scripts for use with Wilkins</p></li>
+<li><p><a class="reference internal" href="../user-guide/cpp-tasks.html"><span class="std std-doc">Writing C++ Tasks</span></a> — compilation and structure of C++ shared object tasks</p></li>
+<li><p><a class="reference internal" href="../user-guide/running.html"><span class="std std-doc">Running Workflows</span></a> — how to launch workflows and calculate process counts</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="workflow-graph.html" class="btn btn-neutral float-left" title="Workflow Graph" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="data-transport.html" class="btn btn-neutral float-right" title="Data Transport" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Orcun Yildiz, Tom Peterka.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
