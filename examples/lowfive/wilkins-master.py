@@ -178,13 +178,12 @@ def main():
                     passthru_list[prop.execGroup].append(
                         (prop.prodIndex, prop.conIndex, prop.filename)
                     )
-            if prop.consumer == 1 and not any(
-                x in prop.execGroup for x in exec_group
-            ):  # orc: setting single intercomm per exec_group.
+            if prop.consumer == 1:
                 if ensembles != 1:
                     vol.set_intercomm(prop.filename, prop.dset, prop.conIndex)
-                wlk_consumer.append(prop.conIndex)
-                exec_group.append(prop.execGroup)
+                if not any(x in prop.execGroup for x in exec_group): # setting single intercomm per exec_group.
+                    wlk_consumer.append(prop.conIndex)
+                    exec_group.append(prop.execGroup)
             if (
                 prop.producer == 1
             ):  # NB: Task can be both producer and consumer.
