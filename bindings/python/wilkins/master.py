@@ -216,13 +216,14 @@ def main():
                         (prop.prodIndex, prop.conIndex, prop.filename)
                     )
 
-            if prop.consumer == 1 and not any(
-                x in prop.execGroup for x in exec_group
-            ):
+            if prop.consumer == 1:
+                # Register every metadata file with its intercomm,
+                # not just the first file per execution group.
                 if ensembles != 1:
                     vol.set_intercomm(prop.filename, prop.dset, prop.conIndex)
-                wlk_consumer.append(prop.conIndex)
-                exec_group.append(prop.execGroup)
+                if not any(x in prop.execGroup for x in exec_group):
+                    wlk_consumer.append(prop.conIndex)
+                    exec_group.append(prop.execGroup)
 
             if prop.producer == 1:
                 wlk_producer = 1
